@@ -144,6 +144,7 @@ textarea,input{width:100%;box-sizing:border-box;background:var(--bg);border:1px 
 /* ===== ตั้งค่าร้าน — แก้ตรงนี้ ===== */
 const CONFIG = {
   liffId: "2012186332-euJlp03P",   // LIFF ID จาก LINE Developers (ช่อง RIDE Order)
+  api: "https://ride-order-api.ride-cafe-2026.workers.dev",    // ระบบหลังบ้านบน Cloudflare (รับออเดอร์ + ส่ง QR ชำระเงิน)
   discount: 0.10,        // ส่วนลดพาร์ทเนอร์ 10% ต่อบิล
   freeAt: 5,             // ครบกี่แก้วต่อบิลได้แถม
   freeItem: "อเมริกาโน่ (แถมฟรี)",
@@ -151,7 +152,7 @@ const CONFIG = {
 };
 const SWEET = ["100%","50%","25%","ไม่หวาน"];
 /* coffee:true = เลือกเมล็ดได้, matcha:true = อัปเกรดมัทฉะเกรดพิธีได้ */
-const CATS = [
+let CATS = [
   {id:"black", name:"BLACK COFFEE", tint:"#5A3A26", coffee:true},
   {id:"white", name:"WHITE COFFEE", tint:"#C8935A", coffee:true},
   {id:"mocktail", name:"MOCKTAIL COFFEE", tint:"#E59A3B", coffee:true},
@@ -204,7 +205,7 @@ const freeOpts=()=>["หวาน "+freeSw, BEANS[freeBean].name];
 
 function imgUrl(item){ return item.image ? new URL(/^https?:/.test(item.image)?item.image:"images/"+item.image, location.href).href : ""; }
 function cup(tint){return `<svg viewBox="0 0 60 80" aria-hidden="true"><path d="M8 14h44l-5 60a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4z" fill="${tint}" opacity=".9"/><path d="M5 8h50v8H5z" fill="#EEF2FF" opacity=".85"/><path d="M33 0l-3 8" stroke="#EEF2FF" stroke-width="3"/></svg>`;}
-function catOf(id){return CATS.find(c=>c.id===id)}
+function catOf(id){return CATS.find(c=>c.id===id)||{id,name:"",tint:"#8A93B8"}}
 
 function render(){
   const m=MODES[mode];
@@ -260,12 +261,12 @@ function pickSheet(id){
     const pic=imgUrl(i);
     openSheet(`<div><h2>${i.name}</h2><div class="g2">${i.en||""} · ${baht(i.price)}</div></div>
     ${pic?`<img class="hero" src="${pic}" alt="">`:""}
-    <div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x)}</div>
+    ${c.nosweet?"":`<div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x)}</div>`}
     ${bean!==null?`<div><div class="lbl">เมล็ดกาแฟ</div>${seg("bean",BEANS,bean,x=>`${x.name}<small>${x.note}</small>`)}</div>`:""}
     ${milk!==null?`<div><div class="lbl">นม</div>${seg("milk",MILKS,milk,x=>`${x.name}${x.add?`<small>+${baht(x.add)}</small>`:""}`)}</div>`:""}
     ${c.matcha?`<div><div class="lbl">อัปเกรดมัทฉะ</div><div class="seg" style="grid-template-columns:1fr"><button data-uji="1" aria-pressed="${uji}">${UJI.name} +${baht(UJI.add)}</button></div></div>`:""}
     <div><div class="lbl">จำนวน</div><div class="qty"><button data-q="-1" aria-label="ลด">−</button><output>${q}</output><button data-q="1" aria-label="เพิ่ม">+</button></div></div>
-    <button class="primary" id="addBtn" ${sw?"":"disabled"}>${sw?`ใส่ตะกร้า · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>`);
+    <button class="primary" id="addBtn" ${sw||c.nosweet?"":"disabled"}>${sw||c.nosweet?`ใส่ตะกร้า · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>`);
   };
   draw();
   $("#sheetIn").onclick=e=>{
@@ -275,8 +276,8 @@ function pickSheet(id){
     else if(b.dataset.milk){milk=+b.dataset.milk;draw();}
     else if(b.dataset.uji){uji=!uji;draw();}
     else if(b.dataset.q){q=Math.max(1,q+ +b.dataset.q);draw();}
-    else if(b.id==="addBtn" && sw){
-      const opts=["หวาน "+sw];
+    else if(b.id==="addBtn" && (sw||c.nosweet)){
+      const opts=sw?["หวาน "+sw]:[];
       if(bean!==null) opts.push(BEANS[bean].name);
       if(milk!==null) opts.push(MILKS[milk].name);
       if(uji) opts.push("เกรดพิธี");
@@ -295,7 +296,7 @@ function cartSheet(){
   const canDeliver=p && t.cups>=p.minDelivery;
   const missing=p?p.fields.filter(f=>!(info[f.id]||"").trim()):[];
   openSheet(`<h2>ตะกร้าของคุณ</h2>
-    <div class="lines">${cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${l.opts.join(" · ")} · ${baht(l.price)}</small></div>
+    <div class="lines">${cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${[...l.opts,baht(l.price)].join(" · ")}</small></div>
       <div class="q"><button data-k="${k}" data-d="-1" aria-label="ลด">−</button>${l.qty}<button data-k="${k}" data-d="1" aria-label="เพิ่ม">+</button></div><div class="p">${baht(l.qty*l.price)}</div></div>`).join("")}
       ${t.free?`<div class="line free"><div class="t">${CONFIG.freeItem}${freeSw?`<small>${freeOpts().join(" · ")}</small>`:""}</div><div class="q">1</div><div class="p">฿0</div></div>`:""}
     </div>
@@ -340,7 +341,7 @@ function flexOf(o){
   const txt=(text,extra={})=>({type:"text",text:String(text),size:"sm",wrap:true,...extra});
   const row=(a,b,extra={})=>({type:"box",layout:"horizontal",contents:[txt(a,{flex:4,...extra}),txt(b,{flex:2,align:"end",...extra})]});
   const items=o.lines.map(l=>{
-    const left={type:"box",layout:"vertical",flex:4,contents:[txt(l.name,{weight:"bold"}),txt(l.opts.join(" · "),{size:"xs",color:"#888888"})]};
+    const left={type:"box",layout:"vertical",flex:4,contents:[txt(l.name,{weight:"bold"}),...(l.opts.length?[txt(l.opts.join(" · "),{size:"xs",color:"#888888"})]:[])]};
     const c=[];
     if(l.image) c.push({type:"image",url:l.image,size:"xxs",aspectMode:"cover",aspectRatio:"3:4",flex:0});
     c.push(left, txt("x"+l.qty,{flex:1,align:"center"}), txt(baht(l.qty*l.price),{flex:2,align:"end"}));
@@ -378,8 +379,23 @@ function previewBubble(o){
 async function send(){
   const o=orderData();
   if(liffReady && liff.isInClient()){
-    try{ await liff.sendMessages([flexOf(o)]); cart=[]; info={}; freeSw=null; liff.closeWindow(); return; }
-    catch(err){ openSheet(`<h2>ส่งคำสั่งซื้อไม่สำเร็จ</h2><div class="note">${err.message||err}</div><div class="note">ลองปิดหน้านี้แล้วเปิดใหม่จากเมนูในแชต RIDE</div>`); return; }
+    const btn=$("#sendBtn"); if(btn){ btn.disabled=true; btn.textContent="กำลังส่งออเดอร์…"; }
+    try{
+      let txt=null;
+      if(CONFIG.api && !CONFIG.api.startsWith("__")){
+        const r=await fetch(CONFIG.api+"/api/order",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
+          accessToken:liff.getAccessToken(), mode, method:o.method, note:o.info.note||"", free:o.free,
+          info:Object.fromEntries(Object.entries(o.info).filter(([k])=>k!=="note")),
+          lines:o.lines.map(l=>({id:l.id,name:l.name,qty:l.qty,opts:l.opts}))})});
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(j.error||"ระบบรับออเดอร์ไม่ตอบสนอง");
+        o.no=j.no; o.t={...o.t,sub:j.subtotal,disc:j.discount,total:j.total}; o.method=j.method;
+        txt={type:"text",text:`ยืนยันออเดอร์ #${j.no} ยอด ฿${j.total} รอรับ QR ชำระเงินครับ`};
+      }
+      await liff.sendMessages(txt?[flexOf(o),txt]:[flexOf(o)]);
+      cart=[]; info={}; freeSw=null; liff.closeWindow(); return;
+    }catch(err){ openSheet(`<h2>ส่งคำสั่งซื้อไม่สำเร็จ</h2><div class="note">${err.message||err}</div><div class="note">ลองกดสั่งอีกครั้ง หรือปิดหน้านี้แล้วเปิดใหม่จากเมนูในแชต RiDE Cafe</div><button class="primary" id="retryBtn">กลับไปที่ตะกร้า</button>`);
+      $("#sheetIn").onclick=e=>{ if(e.target.id==="retryBtn") cartSheet(); }; return; }
   }
   openSheet(`<h2>ตัวอย่างข้อความที่จะส่งเข้าแชต</h2>
     <div class="note">เปิดนอกแอป LINE จึงยังไม่ได้ส่งจริง เมื่อลูกค้ากดจากริชเมนูในไลน์ การ์ดนี้จะเข้าแชตร้านทันที</div>
@@ -401,6 +417,7 @@ async function loadMenu(){
     const r=await fetch("menu.json?t="+Date.now(),{cache:"no-store"});
     if(!r.ok) throw 0;
     const d=await r.json();
+    if(Array.isArray(d.cats)&&d.cats.length) CATS=d.cats.map((c,k)=>({...c,tint:c.tint||["#C8935A","#7DB46C","#C97A6A","#E59A3B","#8A7BD8","#4FA7C8"][k%6]}));
     if(Array.isArray(d.items)&&d.items.length) MENU=d.items;
   }catch(e){}
 }

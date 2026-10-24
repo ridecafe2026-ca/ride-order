@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>RIDE Orders</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0A1230; --surface:#121D45; --surface-2:#1A2858; --line:rgba(160,180,255,.18);
+  --fg:#EEF2FF; --muted:#9AA6C8; --accent:#3E6BFF; --accent-2:#9DB4FF;
+  --pending:#FFB547; --slip:#4FB3FF; --paid:#3DD68C; --done:#8A93B8; --bad:#FF6B6B;
+  --display:"Kanit","IBM Plex Sans Thai",system-ui,sans-serif; --body:"IBM Plex Sans Thai","Kanit",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.5;padding:env(safe-area-inset-top,0) max(12px,env(safe-area-inset-right,0px)) 40px max(12px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 0 6px}
+h1{font-family:var(--display);font-size:24px;margin:0}
+.tabs{display:flex;gap:6px}
+.tab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:8px 16px;font-weight:600}
+.tab[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:600;background:var(--surface-2)}
+.btn.primary{background:var(--paid);color:#062514}
+.btn.blue{background:var(--accent);color:#fff}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input[type=password],input[type=date],input[type=month]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
+.login{max-width:380px;margin:12vh auto 0;background:var(--surface);border-radius:16px;padding:22px;display:grid;gap:12px}
+.err{color:var(--bad);font-size:14px}
+.sub{color:var(--muted);font-size:14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 0 10px}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-size:15px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--surface-2);border-color:var(--accent-2)}
+.chip b{font-family:var(--display);margin-left:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;align-items:start}
+.card{background:var(--surface);border-radius:16px;padding:14px;display:grid;gap:10px;border-left:6px solid var(--st,var(--line))}
+.card.new{animation:flash 1.2s ease-in-out 3}
+@keyframes flash{50%{box-shadow:0 0 0 3px var(--pending)}}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:start}
+.no{font-family:var(--display);font-size:20px;font-weight:600}
+.time{color:var(--muted);font-size:14px}
+.total{font-family:var(--display);font-size:30px;font-weight:700;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.badge{font-size:13px;font-weight:600;border-radius:8px;padding:2px 8px;background:var(--surface-2)}
+.st{color:#0A1230;background:var(--st)}
+.who{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.items{margin:0;padding:0;list-style:none;display:grid;gap:4px;border-top:1px solid var(--line);padding-top:8px}
+.items li{display:flex;justify-content:space-between;gap:8px}
+.items small{display:block;color:var(--muted);font-size:13px}
+.free{color:var(--paid)}
+.deliver{background:var(--bg);border-radius:10px;padding:8px 10px;font-size:15px}
+.slipimg{width:100%;max-height:360px;object-fit:contain;border-radius:10px;background:#fff;cursor:zoom-in}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts .btn{flex:1;min-width:120px;padding:13px}
+.notify{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.kpi{background:var(--surface);border-radius:14px;padding:14px}
+.kpi .v{font-family:var(--display);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:14px}
+.panel{background:var(--surface);border-radius:14px;padding:14px;margin:10px 0}
+.panel h2{font-family:var(--display);font-size:18px;margin:0 0 10px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:160px;border-bottom:1px solid var(--line);overflow-x:auto}
+.bars div{flex:1 0 12px;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.bars div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);font-size:12px;padding:2px 6px;border-radius:6px;white-space:nowrap}
+.axis{display:flex;gap:3px;font-size:11px;color:var(--muted);overflow:hidden}
+.axis span{flex:1 0 12px;text-align:center}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+td.n,th.n{text-align:right}
+.tbl{overflow-x:auto}
+.hbar{height:8px;background:var(--accent);border-radius:4px}
+.zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;z-index:20;padding:16px}
+.zoom img{max-width:100%;max-height:100%;border-radius:8px;background:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="login" id="login" hidden>
+    <h1>RIDE หลังบ้าน</h1>
+    <div class="sub">ใส่รหัสผ่านพนักงานหรือผู้บริหาร</div>
+    <input type="password" id="pw" placeholder="รหัสผ่าน" autocomplete="current-password">
+    <button class="btn blue" id="loginBtn">เข้าสู่ระบบ</button>
+    <div class="err" id="loginErr"></div>
+  </section>
+
+  <div id="app" hidden>
+    <header>
+      <h1>RIDE ออเดอร์</h1>
+      <div class="tabs"><button class="tab" data-tab="orders" aria-pressed="true">ออเดอร์</button><button class="tab" data-tab="summary" id="sumTab" hidden>สรุปยอด</button><button class="tab" id="logout">ออก</button></div>
+    </header>
+
+    <section id="ordersView">
+      <div class="bar">
+        <input type="date" id="day">
+        <button class="btn ghost" id="soundBtn">🔔 เปิดเสียงแจ้งเตือน</button>
+        <label class="notify"><input type="checkbox" id="notify" checked> ส่งข้อความแจ้งลูกค้าเมื่อกดปุ่ม</label>
+        <span class="sub" id="sync"></span>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="grid" id="list"></div>
+    </section>
+
+    <section id="summaryView" hidden>
+      <div class="bar"><input type="month" id="month"><button class="btn ghost" id="csv">ดาวน์โหลด Excel (CSV)</button></div>
+      <div id="sum"></div>
+    </section>
+  </div>
+</div>
+<div class="zoom" id="zoom" hidden><img id="zoomImg" alt="สลิป"></div>
+
+<script>
+const API = "https://ride-order-api.ride-cafe-2026.workers.dev"; // ที่อยู่ระบบหลังบ้านบน Cloudflare
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const baht=n=>"฿"+Number(n||0).toLocaleString("th-TH");
+const bkkToday=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+const ST={pending:["รอชำระ","var(--pending)"],slip:["ได้รับสลิป","var(--slip)"],paid:["ชำระแล้ว · กำลังทำ","var(--paid)"],done:["เสร็จแล้ว","var(--done)"],cancelled:["ยกเลิก","var(--bad)"]};
+const MODE={general:"ลูกค้าทั่วไป",gsb:"ออมสิน บงคำ",supalai:"ศุภาลัย"};
+let key="", role="", orders=[], filter="active", seen=null, soundOn=false, audioCtx=null, slipUrls={}, timer=null;
+try{ key=localStorage.getItem("rideAdminKey")||""; const n=localStorage.getItem("rideNotify"); if(n!==null) $("#notify").checked=n==="1"; }catch(e){}
+
+async function api(path,opt={}){
+  const r=await fetch(API+path,{...opt,headers:{"x-admin-key":key,"content-type":"application/json",...(opt.headers||{})}});
+  if(!r.ok){ const j=await r.json().catch(()=>({})); const e=new Error(j.error||("ระบบตอบกลับ "+r.status)); e.status=r.status; throw e; }
+  return r;
+}
+async function login(){
+  try{
+    const r=await (await api("/api/admin/whoami")).json(); role=r.role;
+    try{localStorage.setItem("rideAdminKey",key);}catch(e){}
+    $("#login").hidden=true; $("#app").hidden=false; $("#sumTab").hidden=role!=="owner";
+    $("#day").value=bkkToday(); $("#month").value=bkkToday().slice(0,7);
+    loadOrders(); clearInterval(timer); timer=setInterval(()=>{ if($("#day").value===bkkToday()) loadOrders(true); },10000);
+  }catch(e){ $("#login").hidden=false; $("#app").hidden=true; $("#loginErr").textContent=key?e.message:""; }
+}
+$("#loginBtn").onclick=()=>{ key=$("#pw").value.trim(); login(); };
+$("#pw").onkeydown=e=>{ if(e.key==="Enter") $("#loginBtn").click(); };
+$("#logout").onclick=()=>{ try{localStorage.removeItem("rideAdminKey");}catch(e){} key=""; clearInterval(timer); $("#pw").value=""; $("#loginErr").textContent=""; $("#app").hidden=true; $("#login").hidden=false; };
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-pressed",x===b)); $("#ordersView").hidden=b.dataset.tab!=="orders"; $("#summaryView").hidden=b.dataset.tab!=="summary"; if(b.dataset.tab==="summary") loadSummary(); });
+$("#notify").onchange=()=>{ try{localStorage.setItem("rideNotify",$("#notify").checked?"1":"0");}catch(e){} };
+$("#day").onchange=()=>{ seen=null; loadOrders(); };
+$("#soundBtn").onclick=()=>{ soundOn=!soundOn; if(soundOn){ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); beep(); } $("#soundBtn").textContent=soundOn?"🔔 เสียงแจ้งเตือน: เปิด":"🔕 เปิดเสียงแจ้งเตือน"; };
+function beep(){ if(!soundOn||!audioCtx) return; const t=audioCtx.currentTime; [0,.25,.5].forEach((d,i)=>{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.frequency.value=i===2?1175:880; g.gain.setValueAtTime(.0001,t+d); g.gain.exponentialRampToValueAtTime(.4,t+d+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d+.2); o.connect(g).connect(audioCtx.destination); o.start(t+d); o.stop(t+d+.22); }); }
+
+async function loadOrders(quiet){
+  try{
+    const d=await (await api("/api/admin/orders?date="+$("#day").value)).json();
+    const prev=seen; seen=new Set(d.orders.map(o=>o.no+":"+o.status));
+    const fresh=prev?d.orders.filter(o=>!prev.has(o.no+":"+o.status)&&(o.status==="pending"||o.status==="slip")):[];
+    orders=d.orders; render(new Set(fresh.map(o=>o.no)));
+    if(fresh.length){ beep(); document.title=`(${fresh.length}) ออเดอร์ใหม่ · RIDE`; setTimeout(()=>document.title="RIDE Orders",8000); }
+    $("#sync").textContent="อัปเดต "+new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  }catch(e){ if(e.status===401) return $("#logout").click(); $("#sync").textContent="เชื่อมต่อไม่ได้: "+e.message; }
+}
+function counts(){ const c={active:0,pending:0,slip:0,paid:0,done:0,cancelled:0,all:orders.length}; orders.forEach(o=>{c[o.status]++; if(["pending","slip","paid"].includes(o.status)) c.active++;}); return c; }
+function render(fresh=new Set()){
+  const c=counts();
+  const chips=[["active","ต้องจัดการ","var(--fg)"],["slip","ได้รับสลิป",ST.slip[1]],["pending","รอชำระ",ST.pending[1]],["paid","กำลังทำ",ST.paid[1]],["done","เสร็จแล้ว",ST.done[1]],["cancelled","ยกเลิก",ST.cancelled[1]],["all","ทั้งหมด","var(--muted)"]];
+  $("#chips").innerHTML=chips.map(([k,l,col])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}"><span class="dot" style="background:${col}"></span>${l}<b>${c[k]}</b></button>`).join("");
+  const order={slip:0,pending:1,paid:2,done:3,cancelled:4};
+  const list=orders.filter(o=>filter==="all"||(filter==="active"?["pending","slip","paid"].includes(o.status):o.status===filter))
+    .sort((a,b)=>filter==="active"?(order[a.status]-order[b.status])||(a.created_at-b.created_at):b.created_at-a.created_at);
+  $("#list").innerHTML=list.length?list.map(o=>card(o,fresh.has(o.no))).join(""):`<div class="empty">ไม่มีออเดอร์ในหมวดนี้</div>`;
+  list.filter(o=>o.has_slip).forEach(loadSlip);
+}
+function card(o,isNew){
+  const [stl,col]=ST[o.status]||["",""];
+  const t=new Date(o.created_at).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+  const info=Object.values(o.info||{}).filter(Boolean).join(" · ");
+  const acts={
+    pending:`<button class="btn primary" data-act="paid" data-no="${o.no}">ได้รับเงินแล้ว</button><button class="btn danger" data-act="cancelled" data-no="${o.no}">ยกเลิก</button>`,
+    slip:`<button class="btn primary" data-act="paid" data-no="${o.no}">ได้รับเงินแล้ว</button><button class="btn danger" data-act="cancelled" data-no="${o.no}">ยกเลิก</button>`,
+    paid:`<button class="btn blue" data-act="done" data-no="${o.no}">${o.method==="delivery"?"ออกไปส่งแล้ว":"พร้อมรับที่ร้าน"}</button>`,
+    done:"", cancelled:`<button class="btn ghost" data-act="pending" data-no="${o.no}">กู้คืนออเดอร์</button>`
+  }[o.status]||"";
+  return `<article class="card${isNew?" new":""}" style="--st:${col}">
+    <div class="top"><div><div class="no">#${esc(o.no)}</div><div class="time">${t} · ${esc(o.display_name||"ลูกค้า")}</div></div><div class="total">${baht(o.total)}</div></div>
+    <div class="who"><span class="badge st">${stl}</span><span class="badge">${MODE[o.mode]||esc(o.mode)}</span><span class="badge">${o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน"}</span><span class="badge">${o.cups} แก้ว</span></div>
+    ${info?`<div class="deliver">${o.method==="delivery"?"ส่งที่: ":"ข้อมูลสิทธิ์: "}<b>${esc(info)}</b></div>`:""}
+    <ul class="items">${o.lines.map(l=>`<li><span>${esc(l.name)} x${l.qty}<small>${esc((l.opts||[]).join(" · "))}</small></span><span>${baht(l.unit*l.qty)}</span></li>`).join("")}
+      ${o.free?`<li class="free"><span>อเมริกาโน่ แถมฟรี x1<small>${esc(o.free.join(" · "))}</small></span><span>฿0</span></li>`:""}
+      ${o.discount?`<li><span>ส่วนลด</span><span>−${baht(o.discount)}</span></li>`:""}</ul>
+    ${o.note?`<div class="deliver">📝 ${esc(o.note)}</div>`:""}
+    ${o.has_slip?`<img class="slipimg" data-slip="${o.no}" alt="สลิปออเดอร์ ${esc(o.no)}">`:(o.status==="pending"?`<div class="sub">ยังไม่ได้รับสลิป</div>`:"")}
+    ${acts?`<div class="acts">${acts}</div>`:""}
+  </article>`;
+}
+async function loadSlip(o){
+  const img=document.querySelector(`[data-slip="${o.no}"]`); if(!img) return;
+  if(!slipUrls[o.no]){ try{ const r=await api("/api/admin/slip/"+o.no); slipUrls[o.no]=URL.createObjectURL(await r.blob()); }catch(e){ return; } }
+  img.src=slipUrls[o.no];
+}
+document.addEventListener("click",async e=>{
+  const f=e.target.closest("[data-f]"); if(f){ filter=f.dataset.f; render(); return; }
+  const s=e.target.closest("[data-slip]"); if(s&&s.src){ $("#zoomImg").src=s.src; $("#zoom").hidden=false; return; }
+  if(e.target.closest("#zoom")){ $("#zoom").hidden=true; return; }
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const act=b.dataset.act, no=b.dataset.no;
+  if(act==="cancelled" && !b.dataset.sure){ b.dataset.sure=1; b.textContent="กดอีกครั้งเพื่อยกเลิก"; return; }
+  b.disabled=true; const old=b.textContent; b.textContent="กำลังบันทึก…";
+  try{
+    const notify=$("#notify").checked && act!=="pending";
+    const r=await (await api(`/api/admin/orders/${no}/status`,{method:"POST",body:JSON.stringify({status:act,notify})})).json();
+    const o=orders.find(x=>x.no===no); if(o) o.status=act;
+    render(); $("#sync").textContent=`#${no} → ${ST[act][0]}${r.notified?" · แจ้งลูกค้าแล้ว":""}`;
+  }catch(err){ b.disabled=false; b.textContent=old; alert0(err.message); }
+});
+function alert0(m){ $("#sync").textContent="ไม่สำเร็จ: "+m; $("#sync").style.color="var(--bad)"; setTimeout(()=>$("#sync").style.color="",6000); }
+
+/* ---------- summary (owner) ---------- */
+let sumData=null;
+$("#month").onchange=loadSummary;
+async function loadSummary(){
+  $("#sum").innerHTML=`<div class="empty">กำลังโหลด…</div>`;
+  try{ sumData=await (await api("/api/admin/summary?month="+$("#month").value)).json(); drawSummary(sumData); }
+  catch(e){ $("#sum").innerHTML=`<div class="empty">${esc(e.message)}</div>`; }
+}
+function drawSummary(d){
+  const T=d.totals, avg=T.orders?Math.round(T.revenue/T.orders):0;
+  const [y,m]=d.month.split("-").map(Number), days=new Date(y,m,0).getDate();
+  const daily=[...Array(days)].map((_,i)=>{ const k=`${d.month}-${String(i+1).padStart(2,"0")}`; return d.byDay[k]||{orders:0,revenue:0}; });
+  const maxR=Math.max(1,...daily.map(x=>x.revenue)), maxH=Math.max(1,...d.byHour), maxI=Math.max(1,...d.topItems.map(x=>x.qty));
+  const hours=d.byHour.map((v,h)=>({h,v})).filter(x=>x.h>=6&&x.h<=21);
+  $("#sum").innerHTML=`
+    <div class="kpis">
+      <div class="kpi"><div class="v">${baht(T.revenue)}</div><div class="l">ยอดขาย (ชำระแล้ว)</div></div>
+      <div class="kpi"><div class="v">${T.orders}</div><div class="l">ออเดอร์</div></div>
+      <div class="kpi"><div class="v">${T.cups}</div><div class="l">แก้ว</div></div>
+      <div class="kpi"><div class="v">${baht(avg)}</div><div class="l">เฉลี่ยต่อออเดอร์</div></div>
+      <div class="kpi"><div class="v">${baht(T.discount)}</div><div class="l">ส่วนลดพาร์ทเนอร์</div></div>
+      <div class="kpi"><div class="v">${T.unpaid} / ${T.cancelled}</div><div class="l">ค้างชำระ / ยกเลิก</div></div>
+    </div>
+    <div class="panel"><h2>ยอดขายรายวัน</h2>
+      <div class="bars">${daily.map((x,i)=>`<div style="height:${x.revenue/maxR*100}%" data-t="${i+1}: ${baht(x.revenue)} · ${x.orders} ออเดอร์"></div>`).join("")}</div>
+      <div class="axis">${daily.map((_,i)=>`<span>${(i+1)%5===0||i===0?i+1:""}</span>`).join("")}</div></div>
+    <div class="panel"><h2>เมนูขายดี</h2><div class="tbl"><table>
+      <tr><th>#</th><th>เมนู</th><th class="n">แก้ว</th><th class="n">ยอดขาย</th><th style="width:30%"></th></tr>
+      ${d.topItems.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="n">${x.qty}</td><td class="n">${baht(x.revenue)}</td><td><div class="hbar" style="width:${x.qty/maxI*100}%"></div></td></tr>`).join("")||`<tr><td colspan="5" class="sub">ยังไม่มีข้อมูล</td></tr>`}
+    </table></div></div>
+    <div class="panel"><h2>แยกตามกลุ่มลูกค้า</h2><div class="tbl"><table>
+      <tr><th>กลุ่ม</th><th class="n">ออเดอร์</th><th class="n">ยอดขาย</th><th class="n">ส่วนลด</th></tr>
+      ${Object.entries(d.byMode).map(([k,v])=>`<tr><td>${MODE[k]||esc(k)}</td><td class="n">${v.orders}</td><td class="n">${baht(v.revenue)}</td><td class="n">${baht(v.discount)}</td></tr>`).join("")||`<tr><td colspan="4" class="sub">ยังไม่มีข้อมูล</td></tr>`}
+    </table></div></div>
+    <div class="panel"><h2>ช่วงเวลาที่มีออเดอร์ (ชำระแล้ว)</h2>
+      <div class="bars" style="height:120px">${hours.map(x=>`<div style="height:${x.v/maxH*100}%" data-t="${x.h}:00 · ${x.v} ออเดอร์"></div>`).join("")}</div>
+      <div class="axis">${hours.map(x=>`<span>${x.h}</span>`).join("")}</div></div>`;
+}
+$("#csv").onclick=()=>{
+  if(!sumData) return;
+  const rows=[["เลขออเดอร์","วันเวลา","กลุ่ม","แก้ว","ยอดชำระ","ส่วนลด","สถานะ","รายการ"],...sumData.orders.map(o=>[o.no,new Date(o.created_at).toLocaleString("th-TH"),MODE[o.mode]||o.mode,o.cups,o.total,o.discount,(ST[o.status]||[o.status])[0],o.items])];
+  const csv="﻿"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`RIDE-orders-${sumData.month}.csv`; a.click();
+};
+
+if(key) login(); else $("#login").hidden=false;
+</script>
+</body>
+</html>

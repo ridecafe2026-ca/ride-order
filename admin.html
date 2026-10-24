@@ -91,7 +91,7 @@ label.f{display:grid;gap:6px;font-size:14px;color:var(--muted)}
   </section>
 
   <section id="main" hidden>
-    <div class="row" style="margin-top:6px"><button class="btn primary" id="addBtn">+ เพิ่มเมนูใหม่</button><span class="sub">แตะชื่อเมนูเพื่อแก้ไข · สวิตช์ = มีขาย / หมด</span></div>
+    <div class="row" style="margin-top:6px"><button class="btn primary" id="addBtn">+ เพิ่มเมนูใหม่</button><button class="btn" id="catBtn">จัดการหมวด</button><span class="sub">แตะชื่อเมนูเพื่อแก้ไข · สวิตช์ = มีขาย / หมด</span></div>
     <div id="list"></div>
   </section>
   <div class="status" id="loading">กำลังโหลด…</div>
@@ -107,7 +107,8 @@ label.f{display:grid;gap:6px;font-size:14px;color:var(--muted)}
 
 <script>
 const OWNER="ridecafe2026-ca", REPO="ride-order", BRANCH="main", API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/`;
-const CATS=[["black","BLACK COFFEE"],["white","WHITE COFFEE"],["mocktail","MOCKTAIL COFFEE"],["matcha","MATCHA"],["noncoffee","NON-COFFEE"]];
+const DEFAULT_CATS=[{id:"black",name:"BLACK COFFEE",coffee:true},{id:"white",name:"WHITE COFFEE",coffee:true},{id:"mocktail",name:"MOCKTAIL COFFEE",coffee:true},{id:"matcha",name:"MATCHA",matcha:true},{id:"noncoffee",name:"NON-COFFEE"}];
+let CATS=DEFAULT_CATS.map(c=>({...c}));
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let token=""; try{token=localStorage.getItem("rideToken")||"";}catch(e){}
@@ -129,7 +130,7 @@ async function load(){
   if(!token){ $("#setup").hidden=false; $("#loading").hidden=true; return; }
   try{
     const f=await gh("menu.json");
-    sha=f.sha; items=JSON.parse(dec(f.content)).items||[];
+    sha=f.sha; const data=JSON.parse(dec(f.content)); items=data.items||[]; CATS=(data.cats&&data.cats.length?data.cats:DEFAULT_CATS).map(c=>({...c}));
     dirty.clear(); pending={};
     $("#setup").hidden=true; $("#main").hidden=false; $("#bar").hidden=false;
     $("#publish").disabled=true; $("#publish").textContent="บันทึกและเผยแพร่"; setStatus("ข้อมูลล่าสุด");
@@ -140,8 +141,11 @@ async function load(){
 function thumb(i){ if(pending[i.id]) return pending[i.id].dataUrl; if(!i.image) return ""; return /^https?:/.test(i.image)?i.image:"images/"+i.image; }
 
 function renderList(){
-  $("#list").innerHTML=CATS.map(([c,label])=>{
-    const rows=items.map((it,idx)=>({it,idx})).filter(x=>x.it.cat===c);
+  const known=new Set(CATS.map(c=>c.id));
+  const groups=[...CATS.map(c=>[c.id,c.name])];
+  if(items.some(i=>!known.has(i.cat))) groups.push(["__none","ไม่มีหมวด (กรุณาเลือกหมวดใหม่)"]);
+  $("#list").innerHTML=groups.map(([c,label])=>{
+    const rows=items.map((it,idx)=>({it,idx})).filter(x=>c==="__none"?!known.has(x.it.cat):x.it.cat===c);
     if(!rows.length) return "";
     return `<div class="cat">${label}</div><div class="list">${rows.map(({it,idx})=>`
       <div class="item${dirty.has(it.id)?" dirty":""}">
@@ -154,11 +158,11 @@ function renderList(){
 }
 
 function openSheet(h){ $("#sheetIn").innerHTML=h; $("#sheet").hidden=false; $("#scrim").hidden=false; }
-function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; }
+function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; $("#sheetIn").onclick=null; }
 
 function editSheet(idx){
   const isNew=idx<0;
-  const it=isNew?{id:"m"+Date.now().toString(36),cat:"black",name:"",en:"",price:"",image:"",best:false,milk:false,soldout:false,hidden:false}:{...items[idx]};
+  const it=isNew?{id:"m"+Date.now().toString(36),cat:(CATS[0]||{}).id,name:"",en:"",price:"",image:"",best:false,milk:false,soldout:false,hidden:false}:{...items[idx]};
   let photo=pending[it.id]||null;
   const draw=()=>{
     const src=photo?photo.dataUrl:thumb(it);
@@ -170,7 +174,7 @@ function editSheet(idx){
       <label class="f">ชื่อเมนู (ไทย)<input type="text" id="f-name" value="${esc(it.name)}"></label>
       <label class="f">ชื่อเมนู (อังกฤษ)<input type="text" id="f-en" value="${esc(it.en)}"></label>
       <label class="f">ราคา (บาท)<input type="number" id="f-price" inputmode="numeric" min="0" value="${esc(it.price||"")}"></label>
-      <label class="f">หมวด<select id="f-cat">${CATS.map(([c,l])=>`<option value="${c}"${c===it.cat?" selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="f">หมวด<select id="f-cat">${CATS.map(c=>`<option value="${esc(c.id)}"${c.id===it.cat?" selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
       <div class="checks">
         <label><input type="checkbox" id="f-best"${it.best?" checked":""}> อยู่ในเมนูแนะนำ</label>
         <label><input type="checkbox" id="f-milk"${it.milk?" checked":""}> ให้ลูกค้าเลือกนมได้</label>
@@ -202,6 +206,36 @@ function editSheet(idx){
   draw();
 }
 
+function catSheet(){
+  const draw=(msg="")=>{
+    openSheet(`<h2>จัดการหมวด</h2>
+      <div class="sub">ลำดับหมวดตรงนี้ = ลำดับปุ่มหมวดที่ลูกค้าเห็น</div>
+      ${CATS.map((c,k)=>{const n=items.filter(i=>i.cat===c.id).length; return `<div class="box" style="margin:0;background:var(--bg)">
+        <label class="f">ชื่อหมวด<input type="text" data-cname="${k}" value="${esc(c.name)}"></label>
+        <div class="checks"><label><input type="checkbox" data-ccoffee="${k}"${c.coffee?" checked":""}> ให้เลือกเมล็ดกาแฟ (Long Drive / View Point)</label>
+        <label><input type="checkbox" data-cmatcha="${k}"${c.matcha?" checked":""}> ให้อัปเกรดมัทฉะเกรดพิธี</label>
+        <label><input type="checkbox" data-csweet="${k}"${c.nosweet?"":" checked"}> ให้เลือกระดับความหวาน (ปิดสำหรับขนม/อาหาร)</label></div>
+        <div class="row"><span class="sub" style="flex:1">${n} เมนู</span><button class="btn" data-cup="${k}">ขึ้น</button><button class="btn" data-cdown="${k}">ลง</button><button class="btn danger" data-cdel="${k}" ${n?"disabled":""}>ลบ</button></div>
+        ${n?'<div class="sub">ลบได้เมื่อไม่มีเมนูในหมวดนี้ (ย้ายเมนูไปหมวดอื่นก่อน)</div>':""}</div>`;}).join("")}
+      <button class="btn" id="cAdd">+ เพิ่มหมวดใหม่</button>
+      <div class="err">${msg}</div>
+      <button class="btn primary" id="cDone">เสร็จ</button>`);
+  };
+  const sync=()=>{ document.querySelectorAll("[data-cname]").forEach(el=>{const c=CATS[+el.dataset.cname]; const v=el.value.trim(); if(v&&v!==c.name){c.name=v; markDirty("__cats");}});
+    document.querySelectorAll("[data-ccoffee]").forEach(el=>{const c=CATS[+el.dataset.ccoffee]; if(!!c.coffee!==el.checked){c.coffee=el.checked; markDirty("__cats");}});
+    document.querySelectorAll("[data-csweet]").forEach(el=>{const c=CATS[+el.dataset.csweet]; if(!c.nosweet!==el.checked){c.nosweet=!el.checked; markDirty("__cats");}});
+    document.querySelectorAll("[data-cmatcha]").forEach(el=>{const c=CATS[+el.dataset.cmatcha]; if(!!c.matcha!==el.checked){c.matcha=el.checked; markDirty("__cats");}}); };
+  draw();
+  $("#sheetIn").onclick=e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    sync();
+    if(b.dataset.cup||b.dataset.cdown){ const k=+(b.dataset.cup||b.dataset.cdown), j=k+(b.dataset.cup?-1:1); if(j<0||j>=CATS.length) return; [CATS[k],CATS[j]]=[CATS[j],CATS[k]]; markDirty("__cats"); draw(); }
+    else if(b.dataset.cdel){ CATS.splice(+b.dataset.cdel,1); markDirty("__cats"); draw(); }
+    else if(b.id==="cAdd"){ CATS.push({id:"c"+Date.now().toString(36),name:"หมวดใหม่"}); markDirty("__cats"); draw(); const ins=document.querySelectorAll("[data-cname]"); const last=ins[ins.length-1]; last.focus(); last.select(); }
+    else if(b.id==="cDone"){ if(CATS.some(c=>!c.name.trim())){ draw("ใส่ชื่อหมวดให้ครบ"); return; } $("#sheetIn").onclick=null; closeSheet(); renderList(); }
+  };
+}
+
 function toPortrait(file){
   return new Promise((res,rej)=>{
     const img=new Image(); img.onload=()=>{
@@ -225,7 +259,7 @@ async function publish(){
       items.find(i=>i.id===id).image=name;
     }
     setStatus("กำลังบันทึกเมนู…");
-    const body=JSON.stringify({updated:new Date().toISOString(),items},null,1);
+    const body=JSON.stringify({updated:new Date().toISOString(),cats:CATS,items},null,1);
     const r=await gh("menu.json",{method:"PUT",body:JSON.stringify({message:"Update menu",content:enc(body),sha,branch:BRANCH})});
     sha=r.content.sha; pending={}; dirty.clear();
     btn.textContent="บันทึกและเผยแพร่"; renderList();
@@ -239,6 +273,7 @@ document.addEventListener("click",e=>{
   else { const it=items[+t.dataset.sold]; it.soldout=!it.soldout; markDirty(it.id); renderList(); }
 });
 $("#addBtn").onclick=()=>editSheet(-1);
+$("#catBtn").onclick=()=>catSheet();
 $("#scrim").onclick=closeSheet;
 $("#publish").onclick=publish;
 $("#keyBtn").onclick=()=>{ $("#setup").hidden=!$("#setup").hidden; };
