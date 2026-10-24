@@ -48,6 +48,9 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;mar
 .grid{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:8px;padding-block:8px}
 .card{background:var(--surface);border:0;padding:0;margin:0;text-align:left;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .card:active{transform:scale(.97)}
+.card.out{cursor:default}
+.card.out .pic img,.card.out .pic svg{filter:grayscale(1);opacity:.45}
+.soldout{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(10,18,48,.85);color:var(--fg);font-weight:600;font-size:14px;border-radius:8px;padding:6px 10px;white-space:nowrap}
 .card.has{outline:2px solid var(--ok);outline-offset:-2px}
 .pic{aspect-ratio:3/4;max-width:100%;position:relative;background:var(--surface-2);display:grid;place-items:center}
 .pic img{width:100%;height:100%;object-fit:cover;display:block}
@@ -159,7 +162,7 @@ const BEANS = [{name:"Long Drive", note:"คั่วกลางค่อนเ
 const MILKS = [{name:"นมวัว", add:0},{name:"นมโอ๊ต", add:0},{name:"Lactose-Free", add:5}];
 const UJI = {name:"มัทฉะเกรดพิธี (Uji Ceremony)", add:30};
 /* เมนู: image = ชื่อไฟล์ในโฟลเดอร์ images/ (เว้นว่างได้), best = เมนูแนะนำ, milk:true = เลือกนมได้ */
-const MENU = [
+let MENU = [   /* สำรอง: หน้าเว็บอ่านเมนูจริงจากไฟล์ menu.json (แก้ผ่านหน้า admin) */
   {id:"americano", cat:"black", name:"อเมริกาโน่", en:"Americano", price:65, image:""},
   {id:"aerocano", cat:"black", name:"แอโรกาโน่", en:"Aerocano", price:70, image:"aerocano.jpg", best:true},
   {id:"latte", cat:"white", name:"ลาเต้", en:"Latte", price:70, image:"latte.jpg", best:true, milk:true},
@@ -199,7 +202,7 @@ let mode=MODES[params.get("mode")]?params.get("mode"):(MODES[location.hash.slice
 let cat="all", cart=[], info={}, method="delivery", liffReady=false, freeSw=null, freeBean=0;
 const freeOpts=()=>["หวาน "+freeSw, BEANS[freeBean].name];
 
-function imgUrl(item){ return item.image ? new URL("images/"+item.image, location.href).href : ""; }
+function imgUrl(item){ return item.image ? new URL(/^https?:/.test(item.image)?item.image:"images/"+item.image, location.href).href : ""; }
 function cup(tint){return `<svg viewBox="0 0 60 80" aria-hidden="true"><path d="M8 14h44l-5 60a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4z" fill="${tint}" opacity=".9"/><path d="M5 8h50v8H5z" fill="#EEF2FF" opacity=".85"/><path d="M33 0l-3 8" stroke="#EEF2FF" stroke-width="3"/></svg>`;}
 function catOf(id){return CATS.find(c=>c.id===id)}
 
@@ -216,7 +219,7 @@ function render(){
   } else perk.hidden=true;
   document.querySelectorAll(".demo button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===mode));
 
-  const items=MENU.filter(i=>!m.bestOnly||i.best);
+  const items=MENU.filter(i=>!i.hidden&&(!m.bestOnly||i.best));
   const cats=CATS.filter(c=>items.some(i=>i.cat===c.id));
   $("#chips").hidden=cats.length<2;
   $("#chips").innerHTML=[{id:"all",name:"ทั้งหมด"},...cats].map(c=>`<button class="chip" data-c="${c.id}" aria-pressed="${cat===c.id}">${c.name}</button>`).join("");
@@ -225,7 +228,7 @@ function render(){
   $("#grid").innerHTML=items.filter(i=>cat==="all"||i.cat===cat).map(i=>{
     const n=cart.filter(l=>l.id===i.id).reduce((a,l)=>a+l.qty,0);
     const u=imgUrl(i);
-    return `<button class="card${n?" has":""}" data-add="${i.id}" aria-label="สั่ง ${i.name}"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}</div>
+    return `<button class="card${n?" has":""}${i.soldout?" out":""}" ${i.soldout?"disabled":`data-add="${i.id}"`} aria-label="สั่ง ${i.name}"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}${i.soldout?'<span class="soldout">หมดชั่วคราว</span>':""}</div>
       <div class="info"><div class="name">${i.name}<small class="en">${i.en||""}</small></div><div class="price">${baht(i.price)}</div>
       ${n?`<div class="inCart">✓ ในตะกร้า ${n} แก้ว</div>`:""}</div></button>`;
   }).join("");
@@ -393,7 +396,16 @@ document.addEventListener("click",e=>{
 });
 $("#scrim").onclick=closeSheet;
 
+async function loadMenu(){
+  try{
+    const r=await fetch("menu.json?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw 0;
+    const d=await r.json();
+    if(Array.isArray(d.items)&&d.items.length) MENU=d.items;
+  }catch(e){}
+}
 function boot(){
+  loadMenu().then(render);
   if(!CONFIG.liffId){ $("#demo").hidden=false; render(); return; }
   const s=document.createElement("script"); s.src="https://static.line-scdn.net/liff/edge/2/sdk.js";
   s.onload=()=>liff.init({liffId:CONFIG.liffId}).then(()=>{

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>RIDE Menu Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0A1230; --surface:#121D45; --surface-2:#1A2858; --line:rgba(160,180,255,.18);
+  --fg:#EEF2FF; --muted:#9AA6C8; --accent:#3E6BFF; --ok:#3DD68C; --warn:#FFB547; --bad:#FF6B6B;
+  --display:"Kanit","IBM Plex Sans Thai",system-ui,sans-serif; --body:"IBM Plex Sans Thai","Kanit",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.5;padding:env(safe-area-inset-top,0) max(12px,env(safe-area-inset-right,0px)) 140px max(12px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:720px;margin:0 auto}
+header{padding:18px 0 8px;display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-size:26px;margin:0}
+.sub{color:var(--muted);font-size:14px}
+a{color:#9DB4FF}
+.box{background:var(--surface);border-radius:14px;padding:16px;display:grid;gap:12px;margin:12px 0}
+.box h2{font-family:var(--display);font-size:19px;margin:0}
+.steps{margin:0;padding-left:20px;display:grid;gap:6px;font-size:15px}
+input[type=text],input[type=number],input[type=password],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:16px}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cat{font-family:var(--display);font-size:15px;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px}
+.list{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border-radius:12px;padding:8px;border:1px solid transparent}
+.item.dirty{border-color:var(--warn)}
+.item .thumb{width:56px;height:75px;border-radius:8px;object-fit:cover;background:var(--surface-2);display:block}
+.item .t{min-width:0;cursor:pointer}
+.item .n{font-weight:600;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .p{font-family:var(--display);font-size:17px;color:#9DB4FF}
+.tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.tag{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--surface-2);color:var(--muted)}
+.tag.out{background:var(--bad);color:#fff}.tag.hid{background:#555;color:#fff}.tag.best{background:var(--accent);color:#fff}
+.sw{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted)}
+.toggle{width:52px;height:30px;border-radius:15px;border:0;background:var(--ok);position:relative}
+.toggle::after{content:"";position:absolute;top:3px;left:25px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle[aria-pressed="false"]{background:#5a6385}
+.toggle[aria-pressed="false"]::after{left:3px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg) 75%,transparent);z-index:5}
+.bar .in{max-width:720px;margin:0 auto;display:grid;gap:6px}
+.bar .btn{width:100%;padding:16px;font-size:18px}
+.status{font-size:14px;text-align:center;color:var(--muted)}
+.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+.scrim{position:fixed;inset:0;background:rgba(3,6,20,.65);z-index:10}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92%;overflow:auto;z-index:11;background:var(--surface);border-radius:18px 18px 0 0;padding:16px max(14px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+.sheet .in{max-width:620px;margin:0 auto;display:grid;gap:14px}
+.sheet h2{font-family:var(--display);margin:0;font-size:22px}
+label.f{display:grid;gap:6px;font-size:14px;color:var(--muted)}
+.photo{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
+.photo img,.photo .ph{width:120px;height:160px;border-radius:10px;object-fit:cover;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);font-size:13px}
+.checks{display:grid;gap:10px}
+.checks label{display:flex;gap:10px;align-items:center;font-size:16px}
+.checks input{width:22px;height:22px}
+.err{color:var(--bad);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>จัดการเมนู RIDE</h1><div class="sub">แก้แล้วกด "บันทึกและเผยแพร่" ลูกค้าเห็นภายใน 1–2 นาที</div></div>
+    <div class="row"><a href="./" target="_blank" rel="noopener">เปิดหน้าสั่ง</a> · <button class="btn" id="keyBtn" style="padding:6px 10px;font-size:14px">กุญแจ</button></div>
+  </header>
+
+  <section class="box" id="setup" hidden>
+    <h2>ตั้งค่ากุญแจครั้งแรก (เครื่องละครั้ง)</h2>
+    <ol class="steps">
+      <li>ล็อกอิน GitHub บัญชี <b>ridecafe2026-ca</b></li>
+      <li>เปิด <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">หน้าสร้างกุญแจ (Fine-grained token)</a></li>
+      <li>Token name: <b>RIDE menu admin</b> · Expiration: เลือก 1 ปี</li>
+      <li>Repository access: เลือก <b>Only select repositories</b> → <b>ride-order</b></li>
+      <li>Permissions → Repository permissions → <b>Contents</b> → เลือก <b>Read and write</b></li>
+      <li>กด Generate token แล้วคัดลอกรหัสที่ขึ้นต้นด้วย <b>github_pat_</b> มาวางด้านล่าง</li>
+    </ol>
+    <input type="password" id="token" placeholder="github_pat_..." autocomplete="off">
+    <div class="row"><button class="btn primary" id="saveKey">บันทึกกุญแจในเครื่องนี้</button><button class="btn" id="clearKey">ลบกุญแจออกจากเครื่องนี้</button></div>
+    <div class="sub">กุญแจเก็บอยู่ในเบราว์เซอร์เครื่องนี้เท่านั้น อย่าส่งให้คนอื่น</div>
+    <div class="err" id="keyErr"></div>
+  </section>
+
+  <section id="main" hidden>
+    <div class="row" style="margin-top:6px"><button class="btn primary" id="addBtn">+ เพิ่มเมนูใหม่</button><span class="sub">แตะชื่อเมนูเพื่อแก้ไข · สวิตช์ = มีขาย / หมด</span></div>
+    <div id="list"></div>
+  </section>
+  <div class="status" id="loading">กำลังโหลด…</div>
+</div>
+
+<div class="bar" id="bar" hidden><div class="in">
+  <button class="btn primary" id="publish" disabled>บันทึกและเผยแพร่</button>
+  <div class="status" id="status"></div>
+</div></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" hidden role="dialog" aria-modal="true"><div class="in" id="sheetIn"></div></section>
+
+<script>
+const OWNER="ridecafe2026-ca", REPO="ride-order", BRANCH="main", API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/`;
+const CATS=[["black","BLACK COFFEE"],["white","WHITE COFFEE"],["mocktail","MOCKTAIL COFFEE"],["matcha","MATCHA"],["noncoffee","NON-COFFEE"]];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let token=""; try{token=localStorage.getItem("rideToken")||"";}catch(e){}
+let items=[], sha=null, dirty=new Set(), pending={}; // pending[id]={dataUrl,b64}
+
+function setStatus(t,cls=""){ const s=$("#status"); s.textContent=t; s.className="status "+cls; }
+function markDirty(id){ dirty.add(id); $("#publish").disabled=false; $("#publish").textContent=`บันทึกและเผยแพร่ (${dirty.size} รายการ)`; setStatus("ยังไม่ได้บันทึก"); }
+
+async function gh(path,opt={}){
+  const r=await fetch(API+path+(opt.method?"":`?ref=${BRANCH}&t=${Date.now()}`),{...opt,headers:{"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+  if(!r.ok){ const e=new Error(r.status===401?"กุญแจไม่ถูกต้องหรือหมดอายุ":r.status===403?"กุญแจไม่มีสิทธิ์แก้ไข (ต้องตั้ง Contents: Read and write)":r.status===404?"ไม่พบไฟล์ หรือกุญแจไม่ได้เลือก repo ride-order":r.status===409?"มีคนแก้เมนูพร้อมกัน กรุณาโหลดหน้าใหม่":"GitHub ตอบกลับ "+r.status); e.status=r.status; throw e; }
+  return r.json();
+}
+const dec=b64=>decodeURIComponent(escape(atob(b64.replace(/\n/g,""))));
+const enc=str=>btoa(unescape(encodeURIComponent(str)));
+
+async function load(){
+  $("#loading").hidden=false; $("#main").hidden=true; $("#bar").hidden=true;
+  if(!token){ $("#setup").hidden=false; $("#loading").hidden=true; return; }
+  try{
+    const f=await gh("menu.json");
+    sha=f.sha; items=JSON.parse(dec(f.content)).items||[];
+    dirty.clear(); pending={};
+    $("#setup").hidden=true; $("#main").hidden=false; $("#bar").hidden=false;
+    $("#publish").disabled=true; $("#publish").textContent="บันทึกและเผยแพร่"; setStatus("ข้อมูลล่าสุด");
+    renderList();
+  }catch(e){ $("#setup").hidden=false; $("#keyErr").textContent="เปิดเมนูไม่ได้: "+e.message; }
+  $("#loading").hidden=true;
+}
+function thumb(i){ if(pending[i.id]) return pending[i.id].dataUrl; if(!i.image) return ""; return /^https?:/.test(i.image)?i.image:"images/"+i.image; }
+
+function renderList(){
+  $("#list").innerHTML=CATS.map(([c,label])=>{
+    const rows=items.map((it,idx)=>({it,idx})).filter(x=>x.it.cat===c);
+    if(!rows.length) return "";
+    return `<div class="cat">${label}</div><div class="list">${rows.map(({it,idx})=>`
+      <div class="item${dirty.has(it.id)?" dirty":""}">
+        ${thumb(it)?`<img class="thumb" src="${esc(thumb(it))}" alt="">`:`<div class="thumb"></div>`}
+        <div class="t" data-edit="${idx}"><div class="n">${esc(it.name)}</div><div class="p">฿${esc(it.price)}</div>
+          <div class="tags">${it.best?'<span class="tag best">แนะนำ</span>':""}${it.soldout?'<span class="tag out">หมด</span>':""}${it.hidden?'<span class="tag hid">ซ่อน</span>':""}${dirty.has(it.id)?'<span class="tag">ยังไม่บันทึก</span>':""}</div></div>
+        <div class="sw"><button class="toggle" data-sold="${idx}" aria-pressed="${!it.soldout}" aria-label="มีขาย"></button>${it.soldout?"หมด":"มีขาย"}</div>
+      </div>`).join("")}</div>`;
+  }).join("");
+}
+
+function openSheet(h){ $("#sheetIn").innerHTML=h; $("#sheet").hidden=false; $("#scrim").hidden=false; }
+function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; }
+
+function editSheet(idx){
+  const isNew=idx<0;
+  const it=isNew?{id:"m"+Date.now().toString(36),cat:"black",name:"",en:"",price:"",image:"",best:false,milk:false,soldout:false,hidden:false}:{...items[idx]};
+  let photo=pending[it.id]||null;
+  const draw=()=>{
+    const src=photo?photo.dataUrl:thumb(it);
+    openSheet(`<h2>${isNew?"เพิ่มเมนูใหม่":"แก้ไขเมนู"}</h2>
+      <div class="photo">${src?`<img src="${esc(src)}" alt="">`:`<div class="ph">ยังไม่มีรูป</div>`}
+        <div style="display:grid;gap:8px"><label class="btn" for="pic" style="text-align:center">${src?"เปลี่ยนรูป":"เพิ่มรูป"}</label>
+        <input type="file" id="pic" accept="image/*" hidden>
+        <span class="sub">ระบบตัดรูปเป็นแนวตั้ง 3:4 ให้อัตโนมัติ ให้แก้วอยู่กลางภาพ</span></div></div>
+      <label class="f">ชื่อเมนู (ไทย)<input type="text" id="f-name" value="${esc(it.name)}"></label>
+      <label class="f">ชื่อเมนู (อังกฤษ)<input type="text" id="f-en" value="${esc(it.en)}"></label>
+      <label class="f">ราคา (บาท)<input type="number" id="f-price" inputmode="numeric" min="0" value="${esc(it.price||"")}"></label>
+      <label class="f">หมวด<select id="f-cat">${CATS.map(([c,l])=>`<option value="${c}"${c===it.cat?" selected":""}>${l}</option>`).join("")}</select></label>
+      <div class="checks">
+        <label><input type="checkbox" id="f-best"${it.best?" checked":""}> อยู่ในเมนูแนะนำ</label>
+        <label><input type="checkbox" id="f-milk"${it.milk?" checked":""}> ให้ลูกค้าเลือกนมได้</label>
+        <label><input type="checkbox" id="f-sold"${it.soldout?" checked":""}> หมดชั่วคราว (ลูกค้าเห็นแต่สั่งไม่ได้)</label>
+        <label><input type="checkbox" id="f-hidden"${it.hidden?" checked":""}> ซ่อนเมนูนี้ (ลูกค้าไม่เห็นเลย)</label>
+      </div>
+      ${isNew?"":`<div class="row"><button class="btn" id="up">เลื่อนขึ้น</button><button class="btn" id="down">เลื่อนลง</button></div>`}
+      <div class="err" id="fErr"></div>
+      <div class="row"><button class="btn primary" id="ok" style="flex:1">ตกลง</button><button class="btn" id="cancel">ยกเลิก</button></div>
+      ${isNew?"":`<button class="btn danger" id="del">ลบเมนูนี้</button>`}`);
+    $("#pic").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ Object.assign(it,read()); photo=await toPortrait(f); draw(); }catch(err){ $("#fErr").textContent="อ่านรูปไม่ได้ ลองรูปอื่น"; } };
+    const read=()=>({...it,name:$("#f-name").value.trim(),en:$("#f-en").value.trim(),price:Math.round(+$("#f-price").value),cat:$("#f-cat").value,
+      best:$("#f-best").checked,milk:$("#f-milk").checked,soldout:$("#f-sold").checked,hidden:$("#f-hidden").checked});
+    $("#ok").onclick=()=>{
+      const v=read();
+      if(!v.name){ $("#fErr").textContent="ใส่ชื่อเมนูก่อน"; return; }
+      if(!(v.price>0)){ $("#fErr").textContent="ใส่ราคาเป็นตัวเลข"; return; }
+      if(photo) pending[v.id]=photo;
+      if(isNew) items.push(v); else items[idx]=v;
+      markDirty(v.id); closeSheet(); renderList();
+    };
+    $("#cancel").onclick=closeSheet;
+    if(!isNew){
+      $("#del").onclick=()=>{ if($("#del").dataset.sure){ items.splice(idx,1); delete pending[it.id]; markDirty(it.id); closeSheet(); renderList(); } else { $("#del").dataset.sure=1; $("#del").textContent="กดอีกครั้งเพื่อยืนยันการลบ"; } };
+      const move=d=>{ const v=read(); items[idx]=v; let j=idx+d; while(j>=0&&j<items.length&&items[j].cat!==v.cat) j+=d; if(j<0||j>=items.length) return; [items[idx],items[j]]=[items[j],items[idx]]; markDirty(v.id); closeSheet(); renderList(); };
+      $("#up").onclick=()=>move(-1); $("#down").onclick=()=>move(1);
+    }
+  };
+  draw();
+}
+
+function toPortrait(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); img.onload=()=>{
+      const W=690,H=920,c=document.createElement("canvas"); c.width=W; c.height=H;
+      const s=Math.max(W/img.width,H/img.height), w=img.width*s, h=img.height*s;
+      const g=c.getContext("2d"); g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+      const dataUrl=c.toDataURL("image/jpeg",0.82); URL.revokeObjectURL(img.src);
+      res({dataUrl,b64:dataUrl.split(",")[1]});
+    }; img.onerror=rej; img.src=URL.createObjectURL(file);
+  });
+}
+
+async function publish(){
+  const btn=$("#publish"); btn.disabled=true;
+  try{
+    const ids=Object.keys(pending).filter(id=>items.some(i=>i.id===id));
+    for(let k=0;k<ids.length;k++){
+      const id=ids[k], name=`${id}-${Date.now().toString(36)}.jpg`;
+      setStatus(`กำลังอัปโหลดรูป ${k+1}/${ids.length}…`);
+      await gh("images/"+name,{method:"PUT",body:JSON.stringify({message:"Update photo: "+(items.find(i=>i.id===id).name),content:pending[id].b64,branch:BRANCH})});
+      items.find(i=>i.id===id).image=name;
+    }
+    setStatus("กำลังบันทึกเมนู…");
+    const body=JSON.stringify({updated:new Date().toISOString(),items},null,1);
+    const r=await gh("menu.json",{method:"PUT",body:JSON.stringify({message:"Update menu",content:enc(body),sha,branch:BRANCH})});
+    sha=r.content.sha; pending={}; dirty.clear();
+    btn.textContent="บันทึกและเผยแพร่"; renderList();
+    setStatus("บันทึกแล้ว ✓ ลูกค้าจะเห็นภายใน 1–2 นาที","ok");
+  }catch(e){ setStatus("บันทึกไม่สำเร็จ: "+e.message,"bad"); btn.disabled=false; }
+}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-edit],[data-sold]"); if(!t) return;
+  if(t.dataset.edit!==undefined) editSheet(+t.dataset.edit);
+  else { const it=items[+t.dataset.sold]; it.soldout=!it.soldout; markDirty(it.id); renderList(); }
+});
+$("#addBtn").onclick=()=>editSheet(-1);
+$("#scrim").onclick=closeSheet;
+$("#publish").onclick=publish;
+$("#keyBtn").onclick=()=>{ $("#setup").hidden=!$("#setup").hidden; };
+$("#saveKey").onclick=()=>{ token=$("#token").value.trim(); try{localStorage.setItem("rideToken",token);}catch(e){} $("#keyErr").textContent=""; $("#token").value=""; load(); };
+$("#clearKey").onclick=()=>{ token=""; try{localStorage.removeItem("rideToken");}catch(e){} $("#keyErr").textContent="ลบกุญแจแล้ว"; $("#main").hidden=true; $("#bar").hidden=true; };
+window.addEventListener("beforeunload",e=>{ if(dirty.size){ e.preventDefault(); e.returnValue=""; } });
+load();
+</script>
+</body>
+</html>
