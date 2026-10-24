@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>RIDE Order</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6,14 +12,14 @@
 /* Layout: one-column phone app — mode banner, category chips, 2-col drink grid, sticky cart bar, bottom sheets. Single dark look matching the rich menu. */
 :root{
   --bg:#0A1230; --surface:#121D45; --surface-2:#1A2858; --line:rgba(160,180,255,.16);
-  --fg:#EEF2FF; --muted:#9AA6C8; --accent:#3E6BFF; --accent-fg:#fff;
+  --fg:#EEF2FF; --muted:#9AA6C8; --accent:#3E6BFF; --accent-2:#9DB4FF; --accent-fg:#fff;
   --gsb:#E6007E; --supalai:#E3A41C; --ok:#3DD68C; --warn:#FFB547;
   --display:"Kanit","IBM Plex Sans Thai",system-ui,sans-serif;
   --body:"IBM Plex Sans Thai","Kanit",system-ui,sans-serif;
   color-scheme:dark;
 }
 html,body{background:var(--bg);color:var(--fg)}
-body{font-family:var(--body);font-size:15px;line-height:1.5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
+body{font-family:var(--body);font-size:16px;line-height:1.5;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px));padding-block:0 120px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 button{font:inherit;color:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -36,26 +42,33 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;mar
 
 .chips{display:flex;gap:8px;overflow-x:auto;padding-block:14px 6px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-size:13px;letter-spacing:.06em;color:var(--muted)}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:transparent;border-radius:999px;padding:8px 16px;font-size:15px;letter-spacing:.06em;color:var(--muted)}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:600}
 
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-block:8px}
-.card{background:var(--surface);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.grid{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:8px;padding-block:8px}
+.card{background:var(--surface);border:0;padding:0;margin:0;text-align:left;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.card:active{transform:scale(.97)}
+.card.has{outline:2px solid var(--ok);outline-offset:-2px}
 .pic{aspect-ratio:3/4;max-width:100%;position:relative;background:var(--surface-2);display:grid;place-items:center}
 .pic img{width:100%;height:100%;object-fit:cover;display:block}
 .pic svg{width:44%;height:auto}
 .badge{position:absolute;top:8px;left:8px;background:var(--accent);color:var(--accent-fg);font-size:11px;font-weight:600;border-radius:6px;padding:2px 7px}
-.info{padding:10px 12px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:end;flex:1}
-.name{grid-column:1/-1;font-weight:600;font-size:14.5px;line-height:1.3}
-.name .en{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.info{padding:10px 10px 12px;display:grid;gap:4px;flex:1;align-content:start}
+.name{font-family:var(--display);font-weight:600;font-size:19px;line-height:1.2}
+.name .en{display:block;font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
 .g2{color:var(--muted);font-size:13.5px}
 .req{color:var(--warn);letter-spacing:0;margin-left:6px}
 .freepick{background:var(--bg);border:1px solid color-mix(in srgb,var(--ok) 50%,transparent);border-radius:12px;padding:12px}
 .seg small{display:block;font-weight:400;font-size:11px;opacity:.75}
 .hero{width:min(100%,240px);max-width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:14px;display:block;margin:0 auto}
-.price{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums;font-size:16px}
-.add{width:34px;height:34px;border-radius:50%;border:0;background:var(--fg);color:var(--bg);font-size:22px;line-height:1;display:grid;place-items:center}
-.inCart{grid-column:1/-1;font-size:12px;color:var(--ok)}
+.price{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums;font-size:19px;color:var(--accent-2)}
+.grid[data-cols="3"] .name{font-size:18px;line-height:1.2}
+.grid[data-cols="3"] .price{font-size:18px}
+.grid[data-cols="3"] .info{padding:9px 8px 11px}
+.grid[data-cols="3"] .name .en{font-size:12.5px}
+.grid[data-cols="4"] .name,.grid[data-cols="4"] .price{font-size:13px}
+.grid[data-cols="4"] .en,.grid[data-cols="4"] .badge{display:none}
+.inCart{font-size:14px;font-weight:600;color:var(--ok)}
 
 .cartbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg) 70%,transparent)}
 .cartbar button{width:100%;max-width:560px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;border:0;border-radius:14px;background:var(--accent);color:var(--accent-fg);padding:14px 18px;font-family:var(--display);font-weight:600;font-size:17px}
@@ -66,9 +79,9 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;mar
 .sheet .in{max-width:560px;margin:0 auto;display:grid;gap:14px}
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 6px}
 .sheet h2{font-family:var(--display);font-weight:600;font-size:21px;margin:0}
-.lbl{font-size:12px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.lbl{font-size:14px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
 .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.seg button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 4px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 4px;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .qty{display:flex;align-items:center;gap:14px}
 .qty button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:20px}
@@ -106,6 +119,8 @@ textarea,input{width:100%;box-sizing:border-box;background:var(--bg);border:1px 
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
 </style>
 
+</head>
+<body>
 <div class="wrap">
   <div class="demo" id="demo" hidden><b>เปิดนอกแอป LINE</b> ดูเมนูได้ แต่ส่งออเดอร์ได้เฉพาะในแชต RiDE Cafe · ดูโหมด:
     <button data-m="menu">ช่อง 1 เมนู</button><button data-m="best">ช่อง 2 แนะนำ</button><button data-m="gsb">ช่อง 4 ออมสิน</button><button data-m="supalai">ช่อง 5 ศุภาลัย</button>
@@ -128,7 +143,8 @@ const CONFIG = {
   liffId: "2012186332-euJlp03P",   // LIFF ID จาก LINE Developers (ช่อง RIDE Order)
   discount: 0.10,        // ส่วนลดพาร์ทเนอร์ 10% ต่อบิล
   freeAt: 5,             // ครบกี่แก้วต่อบิลได้แถม
-  freeItem: "อเมริกาโน่ (แถมฟรี)"
+  freeItem: "อเมริกาโน่ (แถมฟรี)",
+  columns: 3             // จำนวนเมนูต่อแถว (2, 3 หรือ 4)
 };
 const SWEET = ["100%","50%","25%","ไม่หวาน"];
 /* coffee:true = เลือกเมล็ดได้, matcha:true = อัปเกรดมัทฉะเกรดพิธีได้ */
@@ -204,12 +220,14 @@ function render(){
   const cats=CATS.filter(c=>items.some(i=>i.cat===c.id));
   $("#chips").hidden=cats.length<2;
   $("#chips").innerHTML=[{id:"all",name:"ทั้งหมด"},...cats].map(c=>`<button class="chip" data-c="${c.id}" aria-pressed="${cat===c.id}">${c.name}</button>`).join("");
+  const cols=+(new URLSearchParams(location.search).get("cols"))||CONFIG.columns;
+  $("#grid").dataset.cols=cols; $("#grid").style.setProperty("--cols",cols);
   $("#grid").innerHTML=items.filter(i=>cat==="all"||i.cat===cat).map(i=>{
     const n=cart.filter(l=>l.id===i.id).reduce((a,l)=>a+l.qty,0);
     const u=imgUrl(i);
-    return `<article class="card"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}</div>
+    return `<button class="card${n?" has":""}" data-add="${i.id}" aria-label="สั่ง ${i.name}"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}</div>
       <div class="info"><div class="name">${i.name}<small class="en">${i.en||""}</small></div><div class="price">${baht(i.price)}</div>
-      <button class="add" data-add="${i.id}" aria-label="เพิ่ม ${i.name}">+</button>${n?`<div class="inCart">ในตะกร้า ${n} แก้ว</div>`:""}</div></article>`;
+      ${n?`<div class="inCart">✓ ในตะกร้า ${n} แก้ว</div>`:""}</div></button>`;
   }).join("");
   renderBar();
 }
@@ -383,9 +401,12 @@ function boot(){
     const m2=new URLSearchParams(location.search).get("mode"); /* LIFF ส่ง ?mode= มาหลัง init */
     if(MODES[m2]) mode=m2;
     render();
-  }).catch(()=>{$("#demo").hidden=false;render();});
+  }).catch(err=>{$("#demo").hidden=false;$("#demo").insertAdjacentHTML("beforeend",`<span style="color:var(--warn);width:100%">LIFF: ${(err&&(err.code||err.message))||err}</span>`);render();});
   s.onerror=()=>{$("#demo").hidden=false;render();};
   document.head.appendChild(s); render();
 }
 boot();
 </script>
+
+</body>
+</html>
