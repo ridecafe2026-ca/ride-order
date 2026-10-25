@@ -97,7 +97,11 @@ textarea,input{width:100%;box-sizing:border-box;background:var(--bg);border:1px 
 .line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
 .line .t{min-width:0}.line .t small{display:block;color:var(--muted);font-size:12.5px}
 .line .q{display:flex;align-items:center;gap:6px}
-.line .q button{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--bg)}
+.line .q button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--bg)}
+.line .acts{display:flex;gap:8px;margin-top:6px}
+.line .acts button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 12px;font-size:14px;font-weight:600}
+.line .acts .del{color:var(--bad,#FF6B6B);border-color:rgba(255,107,107,.5)}
+.restored{font-size:13px;color:var(--muted);text-align:center}
 .line .p{font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
 .free{color:var(--ok)}
 .sum{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px;font-variant-numeric:tabular-nums}
@@ -150,7 +154,7 @@ const CONFIG = {
   freeItem: "อเมริกาโน่ (แถมฟรี)",
   columns: 3             // จำนวนเมนูต่อแถว (2, 3 หรือ 4)
 };
-const SWEET = ["100%","50%","25%","ไม่หวาน"];
+const SWEET = ["125%","100%","75%","50%","25%","0%"];
 /* coffee:true = เลือกเมล็ดได้, matcha:true = อัปเกรดมัทฉะเกรดพิธีได้ */
 let CATS = [
   {id:"black", name:"BLACK COFFEE", tint:"#5A3A26", coffee:true},
@@ -207,7 +211,25 @@ function imgUrl(item){ return item.image ? new URL(/^https?:/.test(item.image)?i
 function cup(tint){return `<svg viewBox="0 0 60 80" aria-hidden="true"><path d="M8 14h44l-5 60a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4z" fill="${tint}" opacity=".9"/><path d="M5 8h50v8H5z" fill="#EEF2FF" opacity=".85"/><path d="M33 0l-3 8" stroke="#EEF2FF" stroke-width="3"/></svg>`;}
 function catOf(id){return CATS.find(c=>c.id===id)||{id,name:"",tint:"#8A93B8"}}
 
+/* ---- จำตะกร้าไว้ในเครื่อง ถ้าลูกค้าปิดหน้าสั่งโดยไม่ได้ตั้งใจ ---- */
+let loadedMode=null;
+const cartKey=()=>"rideCart:"+mode;
+function saveCart(){ try{ if(loadedMode!==mode) return; localStorage.setItem(cartKey(),JSON.stringify({t:Date.now(),cart,info,method,freeSw,freeBean})); }catch(e){} }
+function clearCart(){ try{ localStorage.removeItem(cartKey()); }catch(e){} }
+function loadCart(){
+  loadedMode=mode;
+  try{ const d=JSON.parse(localStorage.getItem(cartKey())||"null");
+    if(d&&Date.now()-d.t<24*3600e3&&Array.isArray(d.cart)){ cart=d.cart; info=d.info||{}; method=d.method||"delivery"; freeSw=SWEET.includes(d.freeSw)?d.freeSw:null; freeBean=d.freeBean||0; }
+    else { cart=[]; info={}; freeSw=null; freeBean=0; }
+  }catch(e){}
+}
+function repriceCart(){
+  cart=cart.filter(l=>{ const it=MENU.find(x=>x.id===l.id); if(!it||it.hidden||it.soldout) return false;
+    l.name=it.name; l.price=it.price+MILKS.reduce((a,m)=>a+(l.opts.includes(m.name)?m.add:0),0)+(l.opts.includes("เกรดพิธี")?UJI.add:0); return true; });
+}
 function render(){
+  if(loadedMode!==mode) loadCart();
+  repriceCart(); saveCart();
   const m=MODES[mode];
   $("#title").textContent=m.title;
   const perk=$("#perk");
@@ -252,21 +274,28 @@ function renderBar(){
 function openSheet(html){ $("#sheetIn").innerHTML='<div class="grab"></div>'+html; $("#sheet").hidden=false; $("#scrim").hidden=false; }
 function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; }
 
-function pickSheet(id){
+function pickSheet(id, editIdx){
   const i=MENU.find(x=>x.id===id), c=catOf(i.cat);
   let sw=null, bean=c.coffee?0:null, milk=i.milk?0:null, uji=false, q=1;
+  const editing=Number.isInteger(editIdx) && cart[editIdx];
+  if(editing){ const o=cart[editIdx].opts||[];
+    const s0=o.find(x=>x.startsWith("หวาน ")); if(s0){ const v=s0.slice(5); sw=SWEET.includes(v)?v:null; }
+    if(bean!==null){ const k=BEANS.findIndex(b=>o.includes(b.name)); if(k>=0) bean=k; }
+    if(milk!==null){ const k=MILKS.findIndex(m=>o.includes(m.name)); if(k>=0) milk=k; }
+    uji=o.includes("เกรดพิธี"); q=cart[editIdx].qty; }
   const unit=()=>i.price+(milk!==null?MILKS[milk].add:0)+(uji?UJI.add:0);
   const seg=(key,list,sel,label)=>`<div class="seg" style="grid-template-columns:repeat(${list.length},minmax(0,1fr))">${list.map((x,n)=>`<button data-${key}="${n}" aria-pressed="${n===sel}">${label(x)}</button>`).join("")}</div>`;
   const draw=()=>{
     const pic=imgUrl(i);
     openSheet(`<div><h2>${i.name}</h2><div class="g2">${i.en||""} · ${baht(i.price)}</div></div>
     ${pic?`<img class="hero" src="${pic}" alt="">`:""}
-    ${c.nosweet?"":`<div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x)}</div>`}
+    ${c.nosweet?"":`<div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x).replace("repeat(6,","repeat(3,")}</div>`}
     ${bean!==null?`<div><div class="lbl">เมล็ดกาแฟ</div>${seg("bean",BEANS,bean,x=>`${x.name}<small>${x.note}</small>`)}</div>`:""}
     ${milk!==null?`<div><div class="lbl">นม</div>${seg("milk",MILKS,milk,x=>`${x.name}${x.add?`<small>+${baht(x.add)}</small>`:""}`)}</div>`:""}
     ${c.matcha?`<div><div class="lbl">อัปเกรดมัทฉะ</div><div class="seg" style="grid-template-columns:1fr"><button data-uji="1" aria-pressed="${uji}">${UJI.name} +${baht(UJI.add)}</button></div></div>`:""}
     <div><div class="lbl">จำนวน</div><div class="qty"><button data-q="-1" aria-label="ลด">−</button><output>${q}</output><button data-q="1" aria-label="เพิ่ม">+</button></div></div>
-    <button class="primary" id="addBtn" ${sw||c.nosweet?"":"disabled"}>${sw||c.nosweet?`ใส่ตะกร้า · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>`);
+    <button class="primary" id="addBtn" ${sw||c.nosweet?"":"disabled"}>${sw||c.nosweet?`${editing?"บันทึกการแก้ไข":"ใส่ตะกร้า"} · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>
+    ${editing?`<button class="primary" id="backBtn" style="background:transparent;border:1px solid var(--line)">ยกเลิก กลับไปตะกร้า</button>`:""}`);
   };
   draw();
   $("#sheetIn").onclick=e=>{
@@ -276,12 +305,19 @@ function pickSheet(id){
     else if(b.dataset.milk){milk=+b.dataset.milk;draw();}
     else if(b.dataset.uji){uji=!uji;draw();}
     else if(b.dataset.q){q=Math.max(1,q+ +b.dataset.q);draw();}
+    else if(b.id==="backBtn"){ cartSheet(); }
     else if(b.id==="addBtn" && (sw||c.nosweet)){
       const opts=sw?["หวาน "+sw]:[];
       if(bean!==null) opts.push(BEANS[bean].name);
       if(milk!==null) opts.push(MILKS[milk].name);
       if(uji) opts.push("เกรดพิธี");
       const key=i.id+"|"+opts.join("|");
+      if(editing){
+        cart[editIdx]={...cart[editIdx],key,price:unit(),opts,qty:q};
+        const dup=cart.findIndex((l,k)=>k!==editIdx&&l.key===key);
+        if(dup>=0){ cart[dup].qty+=cart[editIdx].qty; cart.splice(editIdx,1); }
+        render(); cartSheet(); return;
+      }
       const ex=cart.find(l=>l.key===key);
       ex?ex.qty+=q:cart.push({key,id:i.id,name:i.name,price:unit(),opts,qty:q,image:imgUrl(i)});
       closeSheet(); render();
@@ -296,12 +332,13 @@ function cartSheet(){
   const canDeliver=p && t.cups>=p.minDelivery;
   const missing=p?p.fields.filter(f=>!(info[f.id]||"").trim()):[];
   openSheet(`<h2>ตะกร้าของคุณ</h2>
-    <div class="lines">${cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${[...l.opts,baht(l.price)].join(" · ")}</small></div>
+    <div class="lines">${cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${[...l.opts,baht(l.price)].join(" · ")}</small>
+        <div class="acts"><button data-edit="${k}">✏️ แก้ไข</button><button class="del" data-del="${k}">🗑 ลบ</button></div></div>
       <div class="q"><button data-k="${k}" data-d="-1" aria-label="ลด">−</button>${l.qty}<button data-k="${k}" data-d="1" aria-label="เพิ่ม">+</button></div><div class="p">${baht(l.qty*l.price)}</div></div>`).join("")}
       ${t.free?`<div class="line free"><div class="t">${CONFIG.freeItem}${freeSw?`<small>${freeOpts().join(" · ")}</small>`:""}</div><div class="q">1</div><div class="p">฿0</div></div>`:""}
     </div>
     ${t.free?`<div class="freepick"><div class="lbl">ความหวานอเมริกาโน่แถมฟรี <span class="req">ต้องเลือก</span></div>
-      <div class="seg">${SWEET.map((x,n)=>`<button data-fsw="${n}" aria-pressed="${x===freeSw}">${x}</button>`).join("")}</div>
+      <div class="seg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${SWEET.map((x,n)=>`<button data-fsw="${n}" aria-pressed="${x===freeSw}">${x}</button>`).join("")}</div>
       <div class="lbl" style="margin-top:10px">เมล็ดกาแฟ</div>
       <div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))">${BEANS.map((x,n)=>`<button data-fbean="${n}" aria-pressed="${n===freeBean}">${x.name}<small>${x.note}</small></button>`).join("")}</div></div>`:""}
     ${p&&!t.free?`<div class="note">อีก ${CONFIG.freeAt-t.cups} แก้ว รับอเมริกาโน่ฟรี 1 แก้ว</div>`:""}
@@ -319,12 +356,15 @@ function cartSheet(){
     <button class="primary" id="sendBtn" ${missing.length||(t.free&&!freeSw)?"disabled":""}>สั่งเลย · ${baht(t.total)}</button>
     ${t.free&&!freeSw?`<div class="note">เลือกความหวานอเมริกาโน่แถมฟรีก่อนกดสั่ง</div>`:""}
     ${p?`<div class="note" id="missNote" ${missing.length?"":"hidden"}>กรอก${p.fields.map(f=>f.label).join(" และ ")}ก่อนกดสั่ง</div>`:""}`);
-  $("#sheetIn").oninput=e=>{ if(e.target.dataset.f){ info[e.target.dataset.f]=e.target.value;
+  saveCart();
+  $("#sheetIn").oninput=e=>{ if(e.target.dataset.f){ info[e.target.dataset.f]=e.target.value; saveCart();
       const miss=p?p.fields.some(f=>!(info[f.id]||"").trim()):false; $("#sendBtn").disabled=miss||(t.free&&!freeSw);
       const mn=$("#missNote"); if(mn) mn.hidden=!miss; } };
   $("#sheetIn").onclick=e=>{
     const b=e.target.closest("button"); if(!b) return;
     if(b.dataset.k){const l=cart[b.dataset.k]; l.qty+= +b.dataset.d; if(l.qty<1) cart.splice(b.dataset.k,1); render(); cartSheet();}
+    else if(b.dataset.del){ cart.splice(+b.dataset.del,1); render(); cartSheet(); }
+    else if(b.dataset.edit){ const k=+b.dataset.edit; if(MENU.some(x=>x.id===cart[k].id)) pickSheet(cart[k].id,k); }
     else if(b.dataset.method){method=b.dataset.method; cartSheet();}
     else if(b.dataset.fsw){freeSw=SWEET[+b.dataset.fsw]; cartSheet();}
     else if(b.dataset.fbean){freeBean=+b.dataset.fbean; cartSheet();}
@@ -390,17 +430,17 @@ async function send(){
         const j=await r.json().catch(()=>({}));
         if(!r.ok) throw new Error(j.error||"ระบบรับออเดอร์ไม่ตอบสนอง");
         o.no=j.no; o.t={...o.t,sub:j.subtotal,disc:j.discount,total:j.total}; o.method=j.method;
-        txt={type:"text",text:`ยืนยันออเดอร์ #${j.no} ยอด ฿${j.total} รอรับ QR ชำระเงินครับ`};
+        txt={type:"text",text:`ยืนยันออเดอร์ #${j.no} ยอด ฿${j.total} ชำระด้วย QR และส่งสลิปเพื่อเริ่มการสั่งซื้อ`};
       }
       await liff.sendMessages(txt?[flexOf(o),txt]:[flexOf(o)]);
-      cart=[]; info={}; freeSw=null; liff.closeWindow(); return;
+      cart=[]; info={}; freeSw=null; clearCart(); liff.closeWindow(); return;
     }catch(err){ openSheet(`<h2>ส่งคำสั่งซื้อไม่สำเร็จ</h2><div class="note">${err.message||err}</div><div class="note">ลองกดสั่งอีกครั้ง หรือปิดหน้านี้แล้วเปิดใหม่จากเมนูในแชต RiDE Cafe</div><button class="primary" id="retryBtn">กลับไปที่ตะกร้า</button>`);
       $("#sheetIn").onclick=e=>{ if(e.target.id==="retryBtn") cartSheet(); }; return; }
   }
   openSheet(`<h2>ตัวอย่างข้อความที่จะส่งเข้าแชต</h2>
     <div class="note">เปิดนอกแอป LINE จึงยังไม่ได้ส่งจริง เมื่อลูกค้ากดจากริชเมนูในไลน์ การ์ดนี้จะเข้าแชตร้านทันที</div>
     ${previewBubble(o)}<button class="primary" id="resetBtn">เริ่มสั่งใหม่</button>`);
-  $("#sheetIn").onclick=e=>{ if(e.target.id==="resetBtn"){cart=[];info={};method="delivery";freeSw=null;freeBean=0;closeSheet();render();} };
+  $("#sheetIn").onclick=e=>{ if(e.target.id==="resetBtn"){cart=[];info={};method="delivery";freeSw=null;freeBean=0;clearCart();closeSheet();render();} };
 }
 
 document.addEventListener("click",e=>{
