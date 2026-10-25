@@ -103,6 +103,17 @@ textarea,input{width:100%;box-sizing:border-box;background:var(--bg);border:1px 
 .line .acts .del{color:var(--bad,#FF6B6B);border-color:rgba(255,107,107,.5)}
 .restored{font-size:13px;color:var(--muted);text-align:center}
 .line .p{font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+.line .p .strike{display:block;color:var(--muted);text-decoration:line-through;font-size:12px}
+.line .p .net{display:block;font-weight:600}
+.line .p .per{display:block;color:var(--ok);font-size:12px;white-space:nowrap}
+.split{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:2px}
+.split .lbl{margin-bottom:4px}
+.sr{display:grid;grid-template-columns:minmax(0,1fr) auto 56px;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.sr:first-of-type{border-top:0}
+.sr .sn{min-width:0;font-size:14px}.sr .sn small{display:block;color:var(--muted);font-size:11.5px}
+.sr .sc{color:var(--muted);font-size:12.5px;white-space:nowrap}.sr .sc em{font-style:normal;color:var(--ok)}
+.sr b{text-align:right;font-family:var(--display);font-size:16px}
+.sr.fr .sn,.sr.fr b{color:var(--ok)}
 .free{color:var(--ok)}
 .sum{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px;font-variant-numeric:tabular-nums}
 .sum div{display:flex;justify-content:space-between}
@@ -257,6 +268,29 @@ function render(){
   }).join("");
   renderBar();
 }
+/* แบ่งส่วนลดทั้งบิลลงรายแก้วตามสัดส่วนราคา ปัดเป็นบาทเต็ม รวมกันเท่าส่วนลดทั้งบิลพอดี (แบบบิลกลุ่ม Grab) */
+function cupSplit(lines, disc){
+  const cups=[]; lines.forEach((l,i)=>{ for(let n=0;n<l.qty;n++) cups.push({i,name:l.name,opts:l.opts||[],price:l.price,disc:0}); });
+  const sub=cups.reduce((a,c)=>a+c.price,0);
+  if(disc&&sub){
+    const raw=cups.map(c=>c.price*disc/sub); raw.forEach((r,k)=>cups[k].disc=Math.floor(r));
+    let left=disc-cups.reduce((a,c)=>a+c.disc,0);
+    raw.map((r,k)=>[r-Math.floor(r),k]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).forEach(([,k])=>{ if(left>0){ cups[k].disc++; left--; } });
+  }
+  cups.forEach(c=>c.net=c.price-c.disc);
+  return cups;
+}
+function netLines(lines, disc){
+  const cups=cupSplit(lines,disc);
+  return lines.map((l,i)=>({gross:l.qty*l.price,net:cups.filter(c=>c.i===i).reduce((a,c)=>a+c.net,0)}));
+}
+function splitHtml(lines, disc, free){
+  const cups=cupSplit(lines,disc);
+  return `<div class="split"><div class="lbl">แยกจ่ายรายแก้ว · สำหรับหารกับเพื่อน</div>
+    ${cups.map((c,k)=>`<div class="sr"><span class="sn">${k+1}. ${c.name}<small>${c.opts.join(" · ")}</small></span><span class="sc">${baht(c.price)} <em>−${baht(c.disc)}</em></span><b>${baht(c.net)}</b></div>`).join("")}
+    ${free?`<div class="sr fr"><span class="sn">${cups.length+1}. ${CONFIG.freeItem}<small>${free.join(" · ")}</small></span><span class="sc"></span><b>฿0</b></div>`:""}
+  </div>`;
+}
 function totals(){
   const p=MODES[mode].partner;
   const cups=cart.reduce((a,l)=>a+l.qty,0);
@@ -332,9 +366,9 @@ function cartSheet(){
   const canDeliver=p && t.cups>=p.minDelivery;
   const missing=p?p.fields.filter(f=>!(info[f.id]||"").trim()):[];
   openSheet(`<h2>ตะกร้าของคุณ</h2>
-    <div class="lines">${cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${[...l.opts,baht(l.price)].join(" · ")}</small>
+    <div class="lines">${(()=>{ const nl=netLines(cart,t.disc); return cart.map((l,k)=>`<div class="line"><div class="t">${l.name}<small>${[...l.opts,baht(l.price)].join(" · ")}</small>
         <div class="acts"><button data-edit="${k}">✏️ แก้ไข</button><button class="del" data-del="${k}">🗑 ลบ</button></div></div>
-      <div class="q"><button data-k="${k}" data-d="-1" aria-label="ลด">−</button>${l.qty}<button data-k="${k}" data-d="1" aria-label="เพิ่ม">+</button></div><div class="p">${baht(l.qty*l.price)}</div></div>`).join("")}
+      <div class="q"><button data-k="${k}" data-d="-1" aria-label="ลด">−</button>${l.qty}<button data-k="${k}" data-d="1" aria-label="เพิ่ม">+</button></div><div class="p">${t.disc?`<span class="strike">${baht(nl[k].gross)}</span>`:""}<span class="net">${baht(nl[k].net)}</span></div></div>`).join(""); })()}
       ${t.free?`<div class="line free"><div class="t">${CONFIG.freeItem}${freeSw?`<small>${freeOpts().join(" · ")}</small>`:""}</div><div class="q">1</div><div class="p">฿0</div></div>`:""}
     </div>
     ${t.free?`<div class="freepick"><div class="lbl">ความหวานอเมริกาโน่แถมฟรี <span class="req">ต้องเลือก</span></div>
@@ -342,9 +376,10 @@ function cartSheet(){
       <div class="lbl" style="margin-top:10px">เมล็ดกาแฟ</div>
       <div class="seg" style="grid-template-columns:repeat(2,minmax(0,1fr))">${BEANS.map((x,n)=>`<button data-fbean="${n}" aria-pressed="${n===freeBean}">${x.name}<small>${x.note}</small></button>`).join("")}</div></div>`:""}
     ${p&&!t.free?`<div class="note">อีก ${CONFIG.freeAt-t.cups} แก้ว รับอเมริกาโน่ฟรี 1 แก้ว</div>`:""}
-    <div class="sum"><div><span>รวม</span><span>${baht(t.sub)}</span></div>
+    <div class="sum"><div><span>${p?"รวมราคาเต็ม":"รวม"}</span><span>${baht(t.sub)}</span></div>
       ${p?`<div class="free"><span>ส่วนลด ${p.label} ${CONFIG.discount*100}%</span><span>−${baht(t.disc)}</span></div>`:""}
       <div class="tot"><span>ยอดชำระ</span><span>${baht(t.total)}</span></div></div>
+    ${t.disc?splitHtml(cart,t.disc,t.free&&freeSw?freeOpts():null):""}
     ${p?`<div><div class="lbl">การรับสินค้า</div><div class="radios">
         <button data-method="delivery" aria-pressed="${method==="delivery"}" ${canDeliver?"":"disabled"}>ส่งถึงที่ (ฟรี)</button>
         <button data-method="pickup" aria-pressed="${method==="pickup"}">รับที่ร้าน</button></div></div>
@@ -380,11 +415,13 @@ function orderData(){
 function flexOf(o){
   const txt=(text,extra={})=>({type:"text",text:String(text),size:"sm",wrap:true,...extra});
   const row=(a,b,extra={})=>({type:"box",layout:"horizontal",contents:[txt(a,{flex:4,...extra}),txt(b,{flex:2,align:"end",...extra})]});
-  const items=o.lines.map(l=>{
+  const nl=netLines(o.lines,o.p?o.t.disc:0);
+  const items=o.lines.map((l,k)=>{
     const left={type:"box",layout:"vertical",flex:4,contents:[txt(l.name,{weight:"bold"}),...(l.opts.length?[txt(l.opts.join(" · "),{size:"xs",color:"#888888"})]:[])]};
     const c=[];
     if(l.image) c.push({type:"image",url:l.image,size:"xxs",aspectMode:"cover",aspectRatio:"3:4",flex:0});
-    c.push(left, txt("x"+l.qty,{flex:1,align:"center"}), txt(baht(l.qty*l.price),{flex:2,align:"end"}));
+    const right={type:"box",layout:"vertical",flex:2,contents:[txt(baht(nl[k].net),{align:"end"})]};
+    c.push(left, txt("x"+l.qty,{flex:1,align:"center"}), right);
     return {type:"box",layout:"horizontal",spacing:"md",contents:c,alignItems:"center"};
   });
   if(o.free) items.push({type:"box",layout:"vertical",contents:[row(CONFIG.freeItem+" x1","฿0",{color:"#1DB446",weight:"bold"}),txt(o.free.join(" · "),{size:"xs",color:"#888888"})]});
@@ -395,9 +432,14 @@ function flexOf(o){
     {type:"box",layout:"vertical",spacing:"md",margin:"md",contents:items},
     {type:"separator",margin:"md"},
     {type:"box",layout:"vertical",margin:"md",spacing:"xs",contents:[
-      row("รวม "+o.t.cups+" แก้ว",baht(o.t.sub)),
-      ...(o.p?[row("ส่วนลด "+CONFIG.discount*100+"%","−"+baht(o.t.disc),{color:"#1DB446"})]:[]),
+      row((o.p?"รวมราคาเต็ม ":"รวม ")+o.t.cups+" แก้ว",baht(o.t.sub)),
+      ...(o.p?[row("ส่วนลด "+CONFIG.discount*100+"% (หักในแต่ละแก้วแล้ว)","−"+baht(o.t.disc),{color:"#1DB446"})]:[]),
       row("ยอดชำระ",baht(o.t.total),{weight:"bold",size:"md"})]},
+    ...(o.p&&o.t.disc?[{type:"separator",margin:"md"},txt("แยกจ่ายรายแก้ว",{weight:"bold",margin:"md"}),
+      {type:"box",layout:"vertical",spacing:"xs",margin:"sm",contents:[
+        ...cupSplit(o.lines,o.t.disc).map((c,k)=>({type:"box",layout:"horizontal",contents:[
+          txt(`${k+1}. ${c.name}`,{flex:5,size:"xs"}),txt(`${c.price}−${c.disc}`,{flex:2,size:"xxs",color:"#888888",align:"end"}),txt(baht(c.net),{flex:2,size:"xs",align:"end",weight:"bold"})]})),
+        ...(o.free?[{type:"box",layout:"horizontal",contents:[txt(`${cupSplit(o.lines,0).length+1}. ${CONFIG.freeItem}`,{flex:5,size:"xs",color:"#1DB446"}),txt(" ",{flex:2,size:"xxs"}),txt("฿0",{flex:2,size:"xs",align:"end",weight:"bold",color:"#1DB446"})]}]:[])]}]:[]),
     {type:"separator",margin:"md"},
     txt(o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน",{weight:"bold",margin:"md"})
   ];
@@ -407,11 +449,12 @@ function flexOf(o){
 }
 function previewBubble(o){
   return `<div class="chat"><div class="bubble"><h3>ใบสั่งซื้อ RIDE COFFEE</h3><div class="g">#${o.no} · ${o.p?o.p.label:"ลูกค้าทั่วไป"}</div><hr>
-    ${o.lines.map(l=>`<div class="r"><span><b>${l.name}</b><br><span class="g">${l.opts.join(" · ")}</span></span><span>x${l.qty}</span><span>${baht(l.qty*l.price)}</span></div>`).join("")}
+    ${(()=>{ const nl=netLines(o.lines,o.p?o.t.disc:0); return o.lines.map((l,k)=>`<div class="r"><span><b>${l.name}</b><br><span class="g">${l.opts.join(" · ")}</span></span><span>x${l.qty}</span><span style="text-align:right">${baht(nl[k].net)}</span></div>`).join(""); })()}
     ${o.free?`<div class="r" style="color:#1DB446"><span><b>${CONFIG.freeItem}</b><br><span class="g">${o.free.join(" · ")}</span></span><span>x1</span><span>฿0</span></div>`:""}<hr>
-    <div class="r"><span>รวม ${o.t.cups} แก้ว</span><span>${baht(o.t.sub)}</span></div>
-    ${o.p?`<div class="r" style="color:#1DB446"><span>ส่วนลด ${CONFIG.discount*100}%</span><span>−${baht(o.t.disc)}</span></div>`:""}
+    <div class="r"><span>${o.p?"รวมราคาเต็ม":"รวม"} ${o.t.cups} แก้ว</span><span>${baht(o.t.sub)}</span></div>
+    ${o.p?`<div class="r" style="color:#1DB446"><span>ส่วนลด ${CONFIG.discount*100}% (หักในแต่ละแก้วแล้ว)</span><span>−${baht(o.t.disc)}</span></div>`:""}
     <div class="r"><b>ยอดชำระ</b><b>${baht(o.t.total)}</b></div><hr>
+    ${o.p&&o.t.disc?`<b>แยกจ่ายรายแก้ว</b>${cupSplit(o.lines,o.t.disc).map((c,k)=>`<div class="r" style="font-size:12px"><span>${k+1}. ${c.name}</span><span style="color:#888">${c.price}−${c.disc}</span><b>${baht(c.net)}</b></div>`).join("")}${o.free?`<div class="r" style="font-size:12px;color:#1DB446"><span>${cupSplit(o.lines,0).length+1}. ${CONFIG.freeItem}</span><b>฿0</b></div>`:""}<hr>`:""}
     <b>${o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน"}</b>
     ${o.p?o.p.fields.map(f=>`<div>${f.label}: ${o.info[f.id]||"-"}</div>`).join(""):""}
     ${(o.info.note||"").trim()?`<div class="g">หมายเหตุ: ${o.info.note.trim()}</div>`:""}</div></div>`;
