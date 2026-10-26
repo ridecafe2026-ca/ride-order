@@ -1,5 +1,31 @@
 {
- "updated": "2026-10-24T12:14:14.472Z",
+ "updated": "2026-10-26T03:42:46.792Z",
+ "cats": [
+  {
+   "id": "black",
+   "name": "BLACK COFFEE",
+   "coffee": true
+  },
+  {
+   "id": "white",
+   "name": "WHITE COFFEE",
+   "coffee": true
+  },
+  {
+   "id": "mocktail",
+   "name": "MOCKTAIL COFFEE",
+   "coffee": true
+  },
+  {
+   "id": "matcha",
+   "name": "MATCHA",
+   "matcha": true
+  },
+  {
+   "id": "noncoffee",
+   "name": "NON-COFFEE"
+  }
+ ],
  "items": [
   {
    "id": "americano",
@@ -8,7 +34,7 @@
    "en": "Americano",
    "price": 65,
    "image": "",
-   "best": false,
+   "best": true,
    "milk": false,
    "soldout": false,
    "hidden": false
@@ -18,7 +44,7 @@
    "cat": "black",
    "name": "แอโรกาโน่",
    "en": "Aerocano",
-   "price": 70,
+   "price": 65,
    "image": "aerocano.jpg",
    "best": true,
    "milk": false,
@@ -34,7 +60,7 @@
    "image": "latte.jpg",
    "best": true,
    "milk": true,
-   "soldout": false,
+   "soldout": true,
    "hidden": false
   },
   {
@@ -220,11 +246,11 @@
   {
    "id": "thai-tea",
    "cat": "noncoffee",
-   "name": "ชาเย็น",
-   "en": "Thai Tea",
+   "name": "ไรด์ชาไทย",
+   "en": "Ride Thai Tea",
    "price": 75,
    "image": "",
-   "best": false,
+   "best": true,
    "milk": true,
    "soldout": false,
    "hidden": false
