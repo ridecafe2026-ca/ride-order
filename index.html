@@ -310,13 +310,15 @@ function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; }
 
 function pickSheet(id, editIdx){
   const i=MENU.find(x=>x.id===id), c=catOf(i.cat);
-  let sw=null, bean=c.coffee?0:null, milk=i.milk?0:null, uji=false, q=1;
+  let sw=null, bean=c.coffee?0:null, milk=i.milk?0:null, uji=false, q=1, note="";
+  const NP="📝 ", clean=t=>t.replace(/[<>&"'`]/g,"").replace(/\s+/g," ").trim().slice(0,60);
   const editing=Number.isInteger(editIdx) && cart[editIdx];
   if(editing){ const o=cart[editIdx].opts||[];
     const s0=o.find(x=>x.startsWith("หวาน ")); if(s0){ const v=s0.slice(5); sw=SWEET.includes(v)?v:null; }
     if(bean!==null){ const k=BEANS.findIndex(b=>o.includes(b.name)); if(k>=0) bean=k; }
     if(milk!==null){ const k=MILKS.findIndex(m=>o.includes(m.name)); if(k>=0) milk=k; }
-    uji=o.includes("เกรดพิธี"); q=cart[editIdx].qty; }
+    uji=o.includes("เกรดพิธี"); q=cart[editIdx].qty;
+    const n0=o.find(x=>x.startsWith(NP)); if(n0) note=n0.slice(NP.length); }
   const unit=()=>i.price+(milk!==null?MILKS[milk].add:0)+(uji?UJI.add:0);
   const seg=(key,list,sel,label)=>`<div class="seg" style="grid-template-columns:repeat(${list.length},minmax(0,1fr))">${list.map((x,n)=>`<button data-${key}="${n}" aria-pressed="${n===sel}">${label(x)}</button>`).join("")}</div>`;
   const draw=()=>{
@@ -327,11 +329,13 @@ function pickSheet(id, editIdx){
     ${bean!==null?`<div><div class="lbl">เมล็ดกาแฟ</div>${seg("bean",BEANS,bean,x=>`${x.name}<small>${x.note}</small>`)}</div>`:""}
     ${milk!==null?`<div><div class="lbl">นม</div>${seg("milk",MILKS,milk,x=>`${x.name}${x.add?`<small>+${baht(x.add)}</small>`:""}`)}</div>`:""}
     ${c.matcha?`<div><div class="lbl">อัปเกรดมัทฉะ</div><div class="seg" style="grid-template-columns:1fr"><button data-uji="1" aria-pressed="${uji}">${UJI.name} +${baht(UJI.add)}</button></div></div>`:""}
+    <label for="i-note"><div class="lbl">หมายเหตุแก้วนี้ (ถ้ามี)</div><textarea id="i-note" rows="2" maxlength="60" placeholder="เช่น น้ำแข็งน้อย, แยกน้ำแข็ง, ไม่ใส่หลอด">${note.replace(/[<>&"]/g,"")}</textarea></label>
     <div><div class="lbl">จำนวน</div><div class="qty"><button data-q="-1" aria-label="ลด">−</button><output>${q}</output><button data-q="1" aria-label="เพิ่ม">+</button></div></div>
     <button class="primary" id="addBtn" ${sw||c.nosweet?"":"disabled"}>${sw||c.nosweet?`${editing?"บันทึกการแก้ไข":"ใส่ตะกร้า"} · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>
     ${editing?`<button class="primary" id="backBtn" style="background:transparent;border:1px solid var(--line)">ยกเลิก กลับไปตะกร้า</button>`:""}`);
   };
   draw();
+  $("#sheetIn").oninput=e=>{ if(e.target.id==="i-note") note=e.target.value; };
   $("#sheetIn").onclick=e=>{
     const b=e.target.closest("button"); if(!b) return;
     if(b.dataset.sw){sw=SWEET[+b.dataset.sw];draw();}
@@ -345,6 +349,7 @@ function pickSheet(id, editIdx){
       if(bean!==null) opts.push(BEANS[bean].name);
       if(milk!==null) opts.push(MILKS[milk].name);
       if(uji) opts.push("เกรดพิธี");
+      const nt=clean(note); if(nt) opts.push(NP+nt);
       const key=i.id+"|"+opts.join("|");
       if(editing){
         cart[editIdx]={...cart[editIdx],key,price:unit(),opts,qty:q};
