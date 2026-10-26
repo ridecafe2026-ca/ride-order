@@ -218,6 +218,7 @@ let mode=MODES[params.get("mode")]?params.get("mode"):(MODES[location.hash.slice
 let cat="all", cart=[], info={}, method="delivery", liffReady=false, freeSw=null, freeBean=0;
 const freeOpts=()=>["หวาน "+freeSw, BEANS[freeBean].name];
 
+document.addEventListener("error",e=>{ const im=e.target; if(im&&im.tagName==="IMG"&&!im.dataset.raw){ const m=(im.getAttribute("src")||"").match(/images\/([^?#/]+)$/); if(m){ im.dataset.raw=1; im.src="https://raw.githubusercontent.com/ridecafe2026-ca/ride-order/main/images/"+m[1]; } } },true);
 function imgUrl(item){ return item.image ? new URL(/^https?:/.test(item.image)?item.image:"images/"+item.image, location.href).href : ""; }
 function cup(tint){return `<svg viewBox="0 0 60 80" aria-hidden="true"><path d="M8 14h44l-5 60a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4z" fill="${tint}" opacity=".9"/><path d="M5 8h50v8H5z" fill="#EEF2FF" opacity=".85"/><path d="M33 0l-3 8" stroke="#EEF2FF" stroke-width="3"/></svg>`;}
 function catOf(id){return CATS.find(c=>c.id===id)||{id,name:"",tint:"#8A93B8"}}

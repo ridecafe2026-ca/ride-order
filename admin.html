@@ -149,6 +149,7 @@ async function load(){
   }catch(e){ $("#setup").hidden=false; $("#keyErr").textContent="เปิดเมนูไม่ได้: "+e.message; }
   $("#loading").hidden=true;
 }
+document.addEventListener("error",e=>{ const im=e.target; if(im&&im.tagName==="IMG"&&!im.dataset.raw){ const m=(im.getAttribute("src")||"").match(/images\/([^?#/]+)$/); if(m){ im.dataset.raw=1; im.src="https://raw.githubusercontent.com/ridecafe2026-ca/ride-order/main/images/"+m[1]; } } },true);
 function thumb(i){ if(pending[i.id]) return pending[i.id].dataUrl; if(!i.image) return ""; return /^https?:/.test(i.image)?i.image:"images/"+i.image; }
 
 function renderList(){
