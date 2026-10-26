@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-26T03:42:46.792Z",
+ "updated": "2026-10-26T09:14:11.992Z",
  "cats": [
   {
    "id": "black",
@@ -60,7 +60,7 @@
    "image": "latte.jpg",
    "best": true,
    "milk": true,
-   "soldout": true,
+   "soldout": false,
    "hidden": false
   },
   {
@@ -69,7 +69,7 @@
    "name": "มอคค่า",
    "en": "Mocha",
    "price": 80,
-   "image": "",
+   "image": "mocha-mvp1i4kh.jpg",
    "best": false,
    "milk": true,
    "soldout": false,
@@ -177,7 +177,7 @@
    "name": "มัทฉะน้ำผึ้งเลม่อน",
    "en": "Honey Lemon Matcha",
    "price": 100,
-   "image": "",
+   "image": "honey-lemon-matcha-mvp1i6i2.jpg",
    "best": false,
    "milk": false,
    "soldout": false,
@@ -225,7 +225,7 @@
    "name": "มัทฉะยูสุ",
    "en": "Matcha Yuzu",
    "price": 110,
-   "image": "matcha-yuzu.jpg",
+   "image": "matcha-yuzu-mvp1ia83.jpg",
    "best": true,
    "milk": false,
    "soldout": false,
@@ -249,7 +249,7 @@
    "name": "ไรด์ชาไทย",
    "en": "Ride Thai Tea",
    "price": 75,
-   "image": "",
+   "image": "thai-tea-mvp1i8fj.jpg",
    "best": true,
    "milk": true,
    "soldout": false,
