@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-26T09:14:11.992Z",
+ "updated": "2026-10-26T09:16:03.815Z",
  "cats": [
   {
    "id": "black",
@@ -69,7 +69,7 @@
    "name": "มอคค่า",
    "en": "Mocha",
    "price": 80,
-   "image": "mocha-mvp1i4kh.jpg",
+   "image": "mocha-mvp1ko6t.jpg",
    "best": false,
    "milk": true,
    "soldout": false,
