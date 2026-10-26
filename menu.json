@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-26T09:22:23.721Z",
+ "updated": "2026-10-26T09:34:32.634Z",
  "cats": [
   {
    "id": "black",
@@ -33,7 +33,7 @@
    "name": "อเมริกาโน่",
    "en": "Americano",
    "price": 65,
-   "image": "",
+   "image": "americano-mvp28g5q.jpg",
    "best": true,
    "milk": false,
    "soldout": false,
