@@ -59,6 +59,17 @@ input[type=text],input[type=number],input[type=password],select{width:100%;backg
 .sheet .in{max-width:620px;margin:0 auto;display:grid;gap:14px}
 .sheet h2{font-family:var(--display);margin:0;font-size:22px}
 label.f{display:grid;gap:6px;font-size:14px;color:var(--muted)}
+.cropper{position:fixed;inset:0;z-index:50;background:#05091A;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));gap:10px;touch-action:none}
+.cropper h3{margin:0;font-size:18px;text-align:center}
+.cropper .stage{flex:1;min-height:0;display:grid;place-items:center}
+.cropper .frame{position:relative;border-radius:12px;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.7);touch-action:none;cursor:grab;background:#000}
+.cropper canvas{display:block;width:100%;height:100%}
+.cropper .grid{position:absolute;inset:0;pointer-events:none;background:
+ linear-gradient(to right,transparent calc(33.33% - .5px),rgba(255,255,255,.35) calc(33.33% - .5px),rgba(255,255,255,.35) calc(33.33% + .5px),transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.35) calc(66.66% - .5px),rgba(255,255,255,.35) calc(66.66% + .5px),transparent calc(66.66% + .5px)),
+ linear-gradient(to bottom,transparent calc(33.33% - .5px),rgba(255,255,255,.35) calc(33.33% - .5px),rgba(255,255,255,.35) calc(33.33% + .5px),transparent calc(33.33% + .5px),transparent calc(66.66% - .5px),rgba(255,255,255,.35) calc(66.66% - .5px),rgba(255,255,255,.35) calc(66.66% + .5px),transparent calc(66.66% + .5px))}
+.cropper .ctl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+.cropper input[type=range]{width:100%;accent-color:var(--accent)}
+.cropper .row{display:flex;gap:8px}.cropper .row .btn{flex:1}
 .photo{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
 .photo img,.photo .ph{width:120px;height:160px;border-radius:10px;object-fit:cover;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);font-size:13px}
 .checks{display:grid;gap:10px}
@@ -170,7 +181,8 @@ function editSheet(idx){
       <div class="photo">${src?`<img src="${esc(src)}" alt="">`:`<div class="ph">ยังไม่มีรูป</div>`}
         <div style="display:grid;gap:8px"><label class="btn" for="pic" style="text-align:center">${src?"เปลี่ยนรูป":"เพิ่มรูป"}</label>
         <input type="file" id="pic" accept="image/*" hidden>
-        <span class="sub">ระบบตัดรูปเป็นแนวตั้ง 3:4 ให้อัตโนมัติ ให้แก้วอยู่กลางภาพ</span></div></div>
+        ${src?`<button class="btn" id="editPic" type="button">✂️ แก้ไขภาพ (ครอป/หมุน)</button>`:""}
+        <span class="sub">เลือกรูปแล้วจะเปิดหน้าจัดภาพ ลากเลื่อน ซูม หมุนได้ ภาพจะเป็นแนวตั้ง 3:4</span></div></div>
       <label class="f">ชื่อเมนู (ไทย)<input type="text" id="f-name" value="${esc(it.name)}"></label>
       <label class="f">ชื่อเมนู (อังกฤษ)<input type="text" id="f-en" value="${esc(it.en)}"></label>
       <label class="f">ราคา (บาท)<input type="number" id="f-price" inputmode="numeric" min="0" value="${esc(it.price||"")}"></label>
@@ -185,7 +197,8 @@ function editSheet(idx){
       <div class="err" id="fErr"></div>
       <div class="row"><button class="btn primary" id="ok" style="flex:1">ตกลง</button><button class="btn" id="cancel">ยกเลิก</button></div>
       ${isNew?"":`<button class="btn danger" id="del">ลบเมนูนี้</button>`}`);
-    $("#pic").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ Object.assign(it,read()); photo=await toPortrait(f); draw(); }catch(err){ $("#fErr").textContent="อ่านรูปไม่ได้ ลองรูปอื่น"; } };
+    $("#pic").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ Object.assign(it,read()); const url=URL.createObjectURL(f); const r=await cropImage(url); if(r){ photo=r; } else URL.revokeObjectURL(url); draw(); }catch(err){ $("#fErr").textContent="อ่านรูปไม่ได้ ลองรูปอื่น"; } };
+    if($("#editPic")) $("#editPic").onclick=async()=>{ try{ Object.assign(it,read()); const r=await cropImage(photo?photo.orig:thumb(it), photo&&photo.state); if(r){ photo=r; draw(); } }catch(err){ $("#fErr").textContent="เปิดรูปนี้แก้ไม่ได้ ลองเลือกรูปใหม่"; } };
     const read=()=>({...it,name:$("#f-name").value.trim(),en:$("#f-en").value.trim(),price:Math.round(+$("#f-price").value),cat:$("#f-cat").value,
       best:$("#f-best").checked,milk:$("#f-milk").checked,soldout:$("#f-sold").checked,hidden:$("#f-hidden").checked});
     $("#ok").onclick=()=>{
@@ -234,6 +247,59 @@ function catSheet(){
     else if(b.id==="cAdd"){ CATS.push({id:"c"+Date.now().toString(36),name:"หมวดใหม่"}); markDirty("__cats"); draw(); const ins=document.querySelectorAll("[data-cname]"); const last=ins[ins.length-1]; last.focus(); last.select(); }
     else if(b.id==="cDone"){ if(CATS.some(c=>!c.name.trim())){ draw("ใส่ชื่อหมวดให้ครบ"); return; } $("#sheetIn").onclick=null; closeSheet(); renderList(); }
   };
+}
+
+function cropImage(src, st){
+  return new Promise((res,rej)=>{
+    const img=new Image(); if(!/^(blob:|data:)/.test(src)) img.crossOrigin="anonymous";
+    img.onerror=()=>rej(new Error("load"));
+    img.onload=()=>{
+      const S=Object.assign({rot:0,tilt:0,zoom:1,dx:0,dy:0},st||{});
+      const box=document.createElement("div"); box.className="cropper";
+      box.innerHTML=`<h3>จัดภาพเมนู</h3><div class="sub" style="text-align:center">ลากเพื่อเลื่อน · ใช้ 2 นิ้วหรือแถบซูมเพื่อขยาย</div>
+        <div class="stage"><div class="frame"><canvas></canvas><div class="grid"></div></div></div>
+        <div class="ctl"><span>ซูม</span><input type="range" id="cz" min="1" max="4" step="0.01"><span id="czv"></span></div>
+        <div class="ctl"><span>เอียง</span><input type="range" id="ct" min="-20" max="20" step="0.5"><span id="ctv"></span></div>
+        <div class="row"><button class="btn" id="cl" type="button">⟲ หมุนซ้าย</button><button class="btn" id="cr" type="button">หมุนขวา ⟳</button><button class="btn" id="c0" type="button">รีเซ็ต</button></div>
+        <div class="row"><button class="btn" id="cx" type="button">ยกเลิก</button><button class="btn primary" id="cok" type="button">ใช้ภาพนี้</button></div>`;
+      document.body.appendChild(box);
+      const fr=box.querySelector(".frame"), cv=box.querySelector("canvas"), g=cv.getContext("2d"), dpr=Math.min(2,window.devicePixelRatio||1);
+      let FW=300,FH=400;
+      const size=()=>{ const st=box.querySelector(".stage").getBoundingClientRect(); FW=Math.floor(Math.min(st.width,st.height*0.75)); FH=Math.round(FW*4/3); fr.style.width=FW+"px"; fr.style.height=FH+"px"; cv.width=FW*dpr; cv.height=FH*dpr; paint(); };
+      const geo=(W,H)=>{ const th=(S.rot+S.tilt)*Math.PI/180, c=Math.abs(Math.cos(th)), sn=Math.abs(Math.sin(th));
+        const cover=Math.max((W*c+H*sn)/img.width,(W*sn+H*c)/img.height); return {th,s:cover*S.zoom,bw:W*c+H*sn,bh:W*sn+H*c}; };
+      const clampOff=()=>{ const {th,s,bw,bh}=geo(FW,FH), c=Math.cos(th), sn=Math.sin(th);
+        let u=S.dx*c+S.dy*sn, v=-S.dx*sn+S.dy*c; const mu=Math.max(0,(img.width*s-bw)/2), mv=Math.max(0,(img.height*s-bh)/2);
+        u=Math.max(-mu,Math.min(mu,u)); v=Math.max(-mv,Math.min(mv,v)); S.dx=u*c-v*sn; S.dy=u*sn+v*c; };
+      const render=(ctx,W,H,k)=>{ const {th,s}=geo(W/k,H/k); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
+        ctx.translate(W/2+S.dx*k,H/2+S.dy*k); ctx.rotate(th); ctx.scale(s*k,s*k); ctx.imageSmoothingQuality="high"; ctx.drawImage(img,-img.width/2,-img.height/2); };
+      const paint=()=>{ clampOff(); render(g,cv.width,cv.height,dpr);
+        box.querySelector("#cz").value=S.zoom; box.querySelector("#czv").textContent=S.zoom.toFixed(1)+"×";
+        box.querySelector("#ct").value=S.tilt; box.querySelector("#ctv").textContent=(S.tilt>0?"+":"")+S.tilt+"°"; };
+      const pts=new Map(); let last=null;
+      fr.onpointerdown=e=>{ fr.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); last=null; };
+      fr.onpointermove=e=>{ if(!pts.has(e.pointerId)) return; const prev=pts.get(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(pts.size===1){ S.dx+=e.clientX-prev.x; S.dy+=e.clientY-prev.y; }
+        else if(pts.size===2){ const [a,b]=[...pts.values()], d=Math.hypot(a.x-b.x,a.y-b.y); if(last) S.zoom=Math.max(1,Math.min(4,S.zoom*d/last)); last=d; }
+        paint(); };
+      fr.onpointerup=fr.onpointercancel=e=>{ pts.delete(e.pointerId); last=null; };
+      fr.onwheel=e=>{ e.preventDefault(); S.zoom=Math.max(1,Math.min(4,S.zoom*(e.deltaY<0?1.06:1/1.06))); paint(); };
+      box.querySelector("#cz").oninput=e=>{ S.zoom=+e.target.value; paint(); };
+      box.querySelector("#ct").oninput=e=>{ S.tilt=+e.target.value; paint(); };
+      box.querySelector("#cl").onclick=()=>{ S.rot=(S.rot+270)%360; paint(); };
+      box.querySelector("#cr").onclick=()=>{ S.rot=(S.rot+90)%360; paint(); };
+      box.querySelector("#c0").onclick=()=>{ Object.assign(S,{rot:0,tilt:0,zoom:1,dx:0,dy:0}); paint(); };
+      const done=v=>{ window.removeEventListener("resize",size); box.remove(); res(v); };
+      box.querySelector("#cx").onclick=()=>done(null);
+      box.querySelector("#cok").onclick=()=>{ try{
+        const W=690,H=920,c=document.createElement("canvas"); c.width=W; c.height=H; render(c.getContext("2d"),W,H,W/FW);
+        const dataUrl=c.toDataURL("image/jpeg",0.85);
+        done({dataUrl,b64:dataUrl.split(",")[1],orig:src,state:{...S,dx:S.dx/FW,dy:S.dy/FW,_n:1}});
+      }catch(err){ box.remove(); rej(err); } };
+      if(S._n){ S.dx*=1; } window.addEventListener("resize",size); requestAnimationFrame(()=>{ if(S._n){ const f=S.dx,gq=S.dy; size(); S.dx=f*FW; S.dy=gq*FW; } size(); });
+    };
+    img.src=src;
+  });
 }
 
 function toPortrait(file){
