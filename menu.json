@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-28T03:41:25.813Z",
+ "updated": "2026-10-28T05:10:23.682Z",
  "cats": [
   {
    "id": "black",
@@ -153,7 +153,7 @@
    "name": "เคลียร์มัทฉะ",
    "en": "Clear Matcha",
    "price": 85,
-   "image": "",
+   "image": "clear-matcha-mvrnoc8v.jpg",
    "best": false,
    "milk": false,
    "soldout": false,
@@ -165,7 +165,7 @@
    "name": "มัทฉะลาเต้",
    "en": "Matcha Latte",
    "price": 90,
-   "image": "",
+   "image": "matcha-latte-mvrnoe6g.jpg",
    "best": false,
    "milk": true,
    "soldout": false,
@@ -213,7 +213,7 @@
    "name": "มัทฉะเอิร์ลเกรย์",
    "en": "Earl Grey Matcha Cold Foam",
    "price": 95,
-   "image": "",
+   "image": "earl-grey-matcha-mvrnog2o.jpg",
    "best": false,
    "milk": true,
    "soldout": false,
