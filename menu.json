@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-27T07:44:17.763Z",
+ "updated": "2026-10-28T03:41:25.813Z",
  "cats": [
   {
    "id": "black",
@@ -261,7 +261,7 @@
    "name": "น้ำผึ้งเลม่อนโซดา",
    "en": "Honey Lemon Soda",
    "price": 75,
-   "image": "",
+   "image": "honey-lemon-soda-mvrki1lc.jpg",
    "best": false,
    "milk": false,
    "soldout": false,
@@ -273,7 +273,7 @@
    "name": "ยูสุโซดา",
    "en": "Yuzu Soda",
    "price": 85,
-   "image": "",
+   "image": "yuzu-soda-mvrkhzog.jpg",
    "best": false,
    "milk": false,
    "soldout": false,
