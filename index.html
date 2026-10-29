@@ -83,6 +83,7 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;mar
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 6px}
 .sheet h2{font-family:var(--display);font-weight:600;font-size:21px;margin:0}
 .lbl{font-size:14px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.desc{margin:-4px 0 0;font-size:13.5px;line-height:1.55;color:var(--muted);white-space:pre-line}
 .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .seg button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 4px;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -326,6 +327,7 @@ function pickSheet(id, editIdx){
     const pic=imgUrl(i);
     openSheet(`<div><h2>${i.name}</h2><div class="g2">${i.en||""} · ${baht(i.price)}</div></div>
     ${pic?`<img class="hero" src="${pic}" alt="">`:""}
+    ${i.desc?`<p class="desc">${String(i.desc).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}</p>`:""}
     ${c.nosweet?"":`<div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x).replace("repeat(6,","repeat(3,")}</div>`}
     ${bean!==null?`<div><div class="lbl">เมล็ดกาแฟ</div>${seg("bean",BEANS,bean,x=>`${x.name}<small>${x.note}</small>`)}</div>`:""}
     ${milk!==null?`<div><div class="lbl">นม</div>${seg("milk",MILKS,milk,x=>`${x.name}${x.add?`<small>+${baht(x.add)}</small>`:""}`)}</div>`:""}
