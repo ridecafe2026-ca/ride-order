@@ -32,7 +32,7 @@ h1{font-family:var(--display);font-size:24px;margin:0}
 .btn.ghost{background:transparent;border:1px solid var(--line)}
 .btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-input[type=password],input[type=date],input[type=month]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
+input[type=password],input[type=date],input[type=month],#resetTxt{color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
 .login{max-width:380px;margin:12vh auto 0;background:var(--surface);border-radius:16px;padding:22px;display:grid;gap:12px}
 .err{color:var(--bad);font-size:14px}
 .sub{color:var(--muted);font-size:14px}
@@ -89,6 +89,9 @@ td.n,th.n{text-align:right}
 .dsh{font-weight:600;font-size:16px}
 .dmore summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0 10px}
 .dlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.dlist span{background:rgba(255,255,255,.06);border-radius:999px;padding:5px 10px;font-size:13px}
+.danger-zone{margin-top:24px;border:1px solid color-mix(in srgb,var(--bad) 55%,transparent);border-radius:16px;padding:14px;display:grid;gap:8px}
+.danger-zone input{flex:1;min-width:180px}
+.btn.del{margin-left:auto}
 </style>
 </head>
 <body>
@@ -122,6 +125,12 @@ td.n,th.n{text-align:right}
     <section id="summaryView" hidden>
       <div class="bar"><input type="month" id="month"><button class="btn ghost" id="csv">ดาวน์โหลด Excel (CSV)</button></div>
       <div id="sum"></div>
+      <div class="danger-zone">
+        <b>🧹 ล้างออเดอร์ทั้งหมด (สำหรับเริ่มใช้งานจริง)</b>
+        <div class="sub">ลบออเดอร์และยอดขายทั้งหมดในระบบแบบถาวร กู้คืนไม่ได้ ใช้ครั้งเดียวตอนเริ่มเปิดใช้จริง หากต้องการลบทีละออเดอร์ ใช้ปุ่ม 🗑 ลบออเดอร์ ในแท็บออเดอร์</div>
+        <div class="bar"><input id="resetTxt" placeholder='พิมพ์คำว่า ล้างข้อมูล' autocomplete="off"><button class="btn danger" id="resetBtn">ล้างออเดอร์ทั้งหมด</button></div>
+        <div class="sub" id="resetMsg"></div>
+      </div>
     </section>
   </div>
 </div>
@@ -216,6 +225,7 @@ function card(o,isNew){
     ready:`<button class="btn primary" data-act="done" data-no="${o.no}">✅ ส่งแล้ว · ส่งข้อความขอบคุณ</button>`,
     done:"", cancelled:`<button class="btn ghost" data-act="pending" data-no="${o.no}">กู้คืนออเดอร์</button>`
   }[o.status]||"";
+  const delBtn=role==="owner"?`<button class="btn ghost del" data-del="${o.no}">🗑 ลบออเดอร์</button>`:"";
   return `<article class="card${isNew?" new":""}${o.arrived_at&&["paid","ready"].includes(o.status)?" here":""}" style="--st:${col}">
     <div class="top"><div><div class="no">#${esc(o.no)}</div><div class="time">${t} · ${esc(o.display_name||"ลูกค้า")}</div></div><div class="total">${baht(o.total)}</div></div>
     <div class="who"><span class="badge st">${stl}</span><span class="badge">${MODE[o.mode]||esc(o.mode)}</span>${o.mode==="pickup"?"":`<span class="badge">${o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน"}</span>`}<span class="badge">${o.cups} แก้ว</span></div>
@@ -226,7 +236,7 @@ function card(o,isNew){
       ${o.discount?`<li><span>ส่วนลด</span><span>−${baht(o.discount)}</span></li>`:""}</ul>
     ${o.note?`<div class="deliver">📝 ${esc(o.note)}</div>`:""}
     ${o.has_slip?`<img class="slipimg" data-slip="${o.no}" alt="สลิปออเดอร์ ${esc(o.no)}">`:(o.status==="pending"?`<div class="sub">ยังไม่ได้รับสลิป</div>`:"")}
-    ${acts?`<div class="acts">${acts}</div>`:""}
+    ${acts||delBtn?`<div class="acts">${acts}${delBtn}</div>`:""}
   </article>`;
 }
 async function loadSlip(o){
@@ -238,6 +248,12 @@ document.addEventListener("click",async e=>{
   const f=e.target.closest("[data-f]"); if(f){ filter=f.dataset.f; render(); return; }
   const s=e.target.closest("[data-slip]"); if(s&&s.src){ $("#zoomImg").src=s.src; $("#zoom").hidden=false; return; }
   if(e.target.closest("#zoom")){ $("#zoom").hidden=true; return; }
+  const dl=e.target.closest("[data-del]");
+  if(dl){ if(!dl.dataset.sure){ dl.dataset.sure=1; dl.textContent="กดอีกครั้งเพื่อลบถาวร"; setTimeout(()=>{ if(dl.isConnected){ delete dl.dataset.sure; dl.textContent="🗑 ลบออเดอร์"; } },5000); return; }
+    dl.disabled=true; dl.textContent="กำลังลบ…";
+    try{ await api(`/api/admin/orders/${dl.dataset.del}/delete`,{method:"POST",body:"{}"}); orders=orders.filter(x=>x.no!==dl.dataset.del); render(); $("#sync").textContent=`ลบ #${dl.dataset.del} แล้ว`; }
+    catch(err){ dl.disabled=false; dl.textContent="🗑 ลบออเดอร์"; alert0(err.message); }
+    return; }
   const b=e.target.closest("[data-act]"); if(!b) return;
   const act=b.dataset.act, no=b.dataset.no;
   if(act==="cancelled" && !b.dataset.sure){ b.dataset.sure=1; b.textContent="กดอีกครั้งเพื่อยกเลิก"; return; }
@@ -254,6 +270,13 @@ function alert0(m){ $("#sync").textContent="ไม่สำเร็จ: "+m; $(
 /* ---------- summary (owner) ---------- */
 let sumData=null;
 $("#month").onchange=loadSummary;
+$("#resetBtn").onclick=async()=>{
+  const t=$("#resetTxt").value.trim(); if(t!=="ล้างข้อมูล"){ $("#resetMsg").textContent="พิมพ์คำว่า ล้างข้อมูล ให้ตรงก่อนกดปุ่ม"; return; }
+  $("#resetBtn").disabled=true; $("#resetMsg").textContent="กำลังล้างข้อมูล…";
+  try{ const r=await (await api("/api/admin/reset",{method:"POST",body:JSON.stringify({confirm:t})})).json();
+    $("#resetTxt").value=""; $("#resetMsg").textContent=`ล้างเรียบร้อย ลบไป ${r.deleted} ออเดอร์ เริ่มนับออเดอร์ใหม่ได้เลย`; orders=[]; seen=null; render(); loadSummary(); }
+  catch(err){ $("#resetMsg").textContent="ไม่สำเร็จ: "+err.message; }
+  $("#resetBtn").disabled=false; };
 async function loadSummary(){
   $("#sum").innerHTML=`<div class="empty">กำลังโหลด…</div>`;
   try{ sumData=await (await api("/api/admin/summary?month="+$("#month").value)).json(); drawSummary(sumData); }
