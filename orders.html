@@ -84,6 +84,11 @@ td.n,th.n{text-align:right}
 .arrived{background:#3DD68C;color:#062514;font-weight:700;border-radius:12px;padding:10px 12px;font-size:17px;line-height:1.4;animation:pulse 1.2s ease-in-out infinite}
 .card.here{box-shadow:0 0 0 3px #3DD68C}
 @keyframes pulse{50%{opacity:.75}}
+.dsum{background:var(--surface);border-radius:16px;padding:14px 14px 6px;margin:4px 0 12px}
+.dsum .kpis{margin:8px 0}.dsum .kpi{background:rgba(255,255,255,.04)}
+.dsh{font-weight:600;font-size:16px}
+.dmore summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0 10px}
+.dlist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.dlist span{background:rgba(255,255,255,.06);border-radius:999px;padding:5px 10px;font-size:13px}
 </style>
 </head>
 <body>
@@ -109,6 +114,7 @@ td.n,th.n{text-align:right}
         <label class="notify"><input type="checkbox" id="notify" checked> ส่งข้อความแจ้งลูกค้าเมื่อกดปุ่ม</label>
         <span class="sub" id="sync"></span>
       </div>
+      <div id="daysum"></div>
       <div class="chips" id="chips"></div>
       <div class="grid" id="list"></div>
     </section>
@@ -169,7 +175,25 @@ async function loadOrders(quiet){
 }
 const ACTIVE=["pending","slip","paid","ready"];
 function counts(){ const c={active:0,pending:0,slip:0,paid:0,ready:0,done:0,cancelled:0,all:orders.length}; orders.forEach(o=>{c[o.status]=(c[o.status]||0)+1; if(ACTIVE.includes(o.status)) c.active++;}); return c; }
+function daySum(){
+  const SOLD=["paid","ready","done"], sold=orders.filter(o=>SOLD.includes(o.status)), unpaid=orders.filter(o=>o.status==="pending"||o.status==="slip");
+  const cups=sold.reduce((a,o)=>a+(o.cups||0),0), free=sold.filter(o=>o.free).length, rev=sold.reduce((a,o)=>a+(o.total||0),0), disc=sold.reduce((a,o)=>a+(o.discount||0),0);
+  const items={}; sold.forEach(o=>(o.lines||[]).forEach(l=>{items[l.name]=(items[l.name]||0)+l.qty;})); if(free) items["อเมริกาโน่ (แถม)"]=(items["อเมริกาโน่ (แถม)"]||0)+free;
+  const top=Object.entries(items).sort((a,b)=>b[1]-a[1]);
+  const grp={}; sold.forEach(o=>{const k=MODE[o.mode]||o.mode; grp[k]=grp[k]||{n:0,r:0}; grp[k].n+=o.cups||0; grp[k].r+=o.total||0;});
+  const d=$("#day").value, isToday=d===bkkToday(), lbl=isToday?"วันนี้":new Date(d+"T00:00:00+07:00").toLocaleDateString("th-TH",{day:"numeric",month:"short"});
+  $("#daysum").innerHTML=`<div class="dsum"><div class="dsh">📊 สรุปยอดขาย${lbl} <span class="sub">(นับเฉพาะออเดอร์ที่ได้รับเงินแล้ว)</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">${cups.toLocaleString("th-TH")} แก้ว</div><div class="l">ขายแล้ว${free?` · แถมฟรีอีก ${free}`:""}</div></div>
+      <div class="kpi"><div class="v">${baht(rev)}</div><div class="l">ยอดขาย${disc?` · ส่วนลด ${baht(disc)}`:""}</div></div>
+      <div class="kpi"><div class="v">${sold.length}</div><div class="l">ออเดอร์</div></div>
+      <div class="kpi"><div class="v">${unpaid.length}</div><div class="l">รอชำระ${unpaid.length?` · ${baht(unpaid.reduce((a,o)=>a+(o.total||0),0))}`:""}</div></div></div>
+    ${top.length?`<details class="dmore"><summary>ดูแยกเมนู / กลุ่มลูกค้า</summary>
+      <div class="dlist">${top.map(([n,q])=>`<span>${esc(n)} <b>${q}</b></span>`).join("")}</div>
+      <div class="dlist">${Object.entries(grp).map(([k,v])=>`<span>${esc(k)} <b>${v.n} แก้ว · ${baht(v.r)}</b></span>`).join("")}</div></details>`:""}</div>`;
+}
 function render(fresh=new Set()){
+  daySum();
   const c=counts();
   const chips=[["active","ต้องจัดการ","var(--fg)"],["slip","ได้รับสลิป",ST.slip[1]],["pending","รอชำระ",ST.pending[1]],["paid","กำลังทำ",ST.paid[1]],["ready","พร้อมรับ",ST.ready[1]],["done","เสร็จแล้ว",ST.done[1]],["cancelled","ยกเลิก",ST.cancelled[1]],["all","ทั้งหมด","var(--muted)"]];
   $("#chips").innerHTML=chips.map(([k,l,col])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}"><span class="dot" style="background:${col}"></span>${l}<b>${c[k]}</b></button>`).join("");
