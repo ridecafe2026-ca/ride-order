@@ -81,6 +81,9 @@ td.n,th.n{text-align:right}
 .hbar{height:8px;background:var(--accent);border-radius:4px}
 .zoom{position:fixed;inset:0;background:rgba(0,0,0,.85);display:grid;place-items:center;z-index:20;padding:16px}
 .zoom img{max-width:100%;max-height:100%;border-radius:8px;background:#fff}
+.arrived{background:#3DD68C;color:#062514;font-weight:700;border-radius:12px;padding:10px 12px;font-size:17px;line-height:1.4;animation:pulse 1.2s ease-in-out infinite}
+.card.here{box-shadow:0 0 0 3px #3DD68C}
+@keyframes pulse{50%{opacity:.75}}
 </style>
 </head>
 <body>
@@ -124,8 +127,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const baht=n=>"฿"+Number(n||0).toLocaleString("th-TH");
 const bkkToday=()=>new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
-const ST={pending:["รอชำระ","var(--pending)"],slip:["ได้รับสลิป","var(--slip)"],paid:["ชำระแล้ว · กำลังทำ","var(--paid)"],done:["เสร็จแล้ว","var(--done)"],cancelled:["ยกเลิก","var(--bad)"]};
-const MODE={general:"ลูกค้าทั่วไป",gsb:"ออมสิน บงคำ",supalai:"ศุภาลัย"};
+const ST={pending:["รอชำระ","var(--pending)"],slip:["ได้รับสลิป","var(--slip)"],paid:["ชำระแล้ว · กำลังทำ","var(--paid)"],ready:["พร้อมรับ · รอลูกค้ามาถึง","#B98CFF"],done:["เสร็จแล้ว","var(--done)"],cancelled:["ยกเลิก","var(--bad)"]};
+const MODE={general:"ลูกค้าทั่วไป",pickup:"🚗 รับหน้าร้าน",gsb:"ออมสิน บงคำ",supalai:"ศุภาลัย"};
 let key="", role="", orders=[], filter="active", seen=null, soundOn=false, audioCtx=null, slipUrls={}, timer=null;
 try{ key=localStorage.getItem("rideAdminKey")||""; const n=localStorage.getItem("rideNotify"); if(n!==null) $("#notify").checked=n==="1"; }catch(e){}
 
@@ -155,21 +158,24 @@ function beep(){ if(!soundOn||!audioCtx) return; const t=audioCtx.currentTime; [
 async function loadOrders(quiet){
   try{
     const d=await (await api("/api/admin/orders?date="+$("#day").value)).json();
-    const prev=seen; seen=new Set(d.orders.map(o=>o.no+":"+o.status));
-    const fresh=prev?d.orders.filter(o=>!prev.has(o.no+":"+o.status)&&(o.status==="pending"||o.status==="slip")):[];
+    const sig=o=>o.no+":"+o.status+":"+(o.arrived_at?1:0);
+    const prev=seen; seen=new Set(d.orders.map(sig));
+    const fresh=prev?d.orders.filter(o=>!prev.has(sig(o))&&(o.status==="pending"||o.status==="slip"||(o.arrived_at&&["paid","ready"].includes(o.status)))):[];
     orders=d.orders; render(new Set(fresh.map(o=>o.no)));
-    if(fresh.length){ beep(); document.title=`(${fresh.length}) ออเดอร์ใหม่ · RIDE`; setTimeout(()=>document.title="RIDE Orders",8000); }
+    const arr=fresh.filter(o=>o.arrived_at);
+    if(fresh.length){ beep(); if(arr.length) setTimeout(beep,900); document.title=arr.length?`🚗 ลูกค้ามาถึง ${arr.map(o=>"#"+o.no).join(" ")} · RIDE`:`(${fresh.length}) ออเดอร์ใหม่ · RIDE`; setTimeout(()=>document.title="RIDE Orders",8000); }
     $("#sync").textContent="อัปเดต "+new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
   }catch(e){ if(e.status===401) return $("#logout").click(); $("#sync").textContent="เชื่อมต่อไม่ได้: "+e.message; }
 }
-function counts(){ const c={active:0,pending:0,slip:0,paid:0,done:0,cancelled:0,all:orders.length}; orders.forEach(o=>{c[o.status]++; if(["pending","slip","paid"].includes(o.status)) c.active++;}); return c; }
+const ACTIVE=["pending","slip","paid","ready"];
+function counts(){ const c={active:0,pending:0,slip:0,paid:0,ready:0,done:0,cancelled:0,all:orders.length}; orders.forEach(o=>{c[o.status]=(c[o.status]||0)+1; if(ACTIVE.includes(o.status)) c.active++;}); return c; }
 function render(fresh=new Set()){
   const c=counts();
-  const chips=[["active","ต้องจัดการ","var(--fg)"],["slip","ได้รับสลิป",ST.slip[1]],["pending","รอชำระ",ST.pending[1]],["paid","กำลังทำ",ST.paid[1]],["done","เสร็จแล้ว",ST.done[1]],["cancelled","ยกเลิก",ST.cancelled[1]],["all","ทั้งหมด","var(--muted)"]];
+  const chips=[["active","ต้องจัดการ","var(--fg)"],["slip","ได้รับสลิป",ST.slip[1]],["pending","รอชำระ",ST.pending[1]],["paid","กำลังทำ",ST.paid[1]],["ready","พร้อมรับ",ST.ready[1]],["done","เสร็จแล้ว",ST.done[1]],["cancelled","ยกเลิก",ST.cancelled[1]],["all","ทั้งหมด","var(--muted)"]];
   $("#chips").innerHTML=chips.map(([k,l,col])=>`<button class="chip" data-f="${k}" aria-pressed="${filter===k}"><span class="dot" style="background:${col}"></span>${l}<b>${c[k]}</b></button>`).join("");
-  const order={slip:0,pending:1,paid:2,done:3,cancelled:4};
-  const list=orders.filter(o=>filter==="all"||(filter==="active"?["pending","slip","paid"].includes(o.status):o.status===filter))
-    .sort((a,b)=>filter==="active"?(order[a.status]-order[b.status])||(a.created_at-b.created_at):b.created_at-a.created_at);
+  const order={slip:1,pending:2,paid:3,ready:4,done:5,cancelled:6}, rank=o=>(o.arrived_at&&["paid","ready"].includes(o.status))?0:order[o.status];
+  const list=orders.filter(o=>filter==="all"||(filter==="active"?ACTIVE.includes(o.status):o.status===filter))
+    .sort((a,b)=>filter==="active"?(rank(a)-rank(b))||(a.created_at-b.created_at):b.created_at-a.created_at);
   $("#list").innerHTML=list.length?list.map(o=>card(o,fresh.has(o.no))).join(""):`<div class="empty">ไม่มีออเดอร์ในหมวดนี้</div>`;
   list.filter(o=>o.has_slip).forEach(loadSlip);
 }
@@ -180,13 +186,17 @@ function card(o,isNew){
   const acts={
     pending:`<button class="btn primary" data-act="paid" data-no="${o.no}">ได้รับเงินแล้ว</button><button class="btn danger" data-act="cancelled" data-no="${o.no}">ยกเลิก</button>`,
     slip:`<button class="btn primary" data-act="paid" data-no="${o.no}">ได้รับเงินแล้ว</button><button class="btn danger" data-act="cancelled" data-no="${o.no}">ยกเลิก</button>`,
-    paid:`<button class="btn blue" data-act="done" data-no="${o.no}">${o.method==="delivery"?"ออกไปส่งแล้ว":"พร้อมรับที่ร้าน"}</button>`,
+    paid:o.method==="delivery"?`<button class="btn blue" data-act="done" data-no="${o.no}">ออกไปส่งแล้ว</button>`
+      :o.arrived_at?`<button class="btn primary" data-act="done" data-no="${o.no}">✅ ส่งแล้ว · ส่งข้อความขอบคุณ</button>`
+      :`<button class="btn blue" data-act="ready" data-no="${o.no}">☕ เครื่องดื่มพร้อมแล้ว</button>`,
+    ready:`<button class="btn primary" data-act="done" data-no="${o.no}">✅ ส่งแล้ว · ส่งข้อความขอบคุณ</button>`,
     done:"", cancelled:`<button class="btn ghost" data-act="pending" data-no="${o.no}">กู้คืนออเดอร์</button>`
   }[o.status]||"";
-  return `<article class="card${isNew?" new":""}" style="--st:${col}">
+  return `<article class="card${isNew?" new":""}${o.arrived_at&&["paid","ready"].includes(o.status)?" here":""}" style="--st:${col}">
     <div class="top"><div><div class="no">#${esc(o.no)}</div><div class="time">${t} · ${esc(o.display_name||"ลูกค้า")}</div></div><div class="total">${baht(o.total)}</div></div>
-    <div class="who"><span class="badge st">${stl}</span><span class="badge">${MODE[o.mode]||esc(o.mode)}</span><span class="badge">${o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน"}</span><span class="badge">${o.cups} แก้ว</span></div>
-    ${info?`<div class="deliver">${o.method==="delivery"?"ส่งที่: ":"ข้อมูลสิทธิ์: "}<b>${esc(info)}</b></div>`:""}
+    <div class="who"><span class="badge st">${stl}</span><span class="badge">${MODE[o.mode]||esc(o.mode)}</span>${o.mode==="pickup"?"":`<span class="badge">${o.method==="delivery"?"🛵 ส่งถึงที่":"🏪 รับที่ร้าน"}</span>`}<span class="badge">${o.cups} แก้ว</span></div>
+    ${o.arrived_at&&["paid","ready"].includes(o.status)?`<div class="arrived">🚗 ลูกค้ามาถึงหน้าร้านแล้ว · ${new Date(o.arrived_at).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})} น.${o.info&&o.info.car?`<br><b>${esc(o.info.car)}</b>`:""}</div>`:o.status==="ready"?`<div class="sub">ส่งปุ่ม "มาถึงแล้ว" ให้ลูกค้าแล้ว · รอลูกค้ามาถึง</div>`:""}
+    ${info?`<div class="deliver">${o.method==="delivery"?"ส่งที่: ":o.mode==="pickup"?"ผู้รับ: ":"ข้อมูลสิทธิ์: "}<b>${esc(info)}</b></div>`:""}
     <ul class="items">${o.lines.map(l=>`<li><span>${esc(l.name)} x${l.qty}<small>${esc((l.opts||[]).join(" · "))}</small></span><span>${baht(l.unit*l.qty)}</span></li>`).join("")}
       ${o.free?`<li class="free"><span>อเมริกาโน่ แถมฟรี x1<small>${esc(o.free.join(" · "))}</small></span><span>฿0</span></li>`:""}
       ${o.discount?`<li><span>ส่วนลด</span><span>−${baht(o.discount)}</span></li>`:""}</ul>
