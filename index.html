@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}.howbtn{justify-self:start;margin-top:4px;background:transparent;border:1px solid var(--line);color:var(--ink,#fff);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.howto{position:fixed;inset:0;z-index:60;background:rgba(3,6,20,.82);display:grid;place-items:center;padding:16px}
+.howcard{width:min(420px,100%);max-height:100%;display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;position:relative}
+.howhead{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
+.howx{background:transparent;border:0;color:inherit;font-size:20px;cursor:pointer;padding:2px 6px}
+.howcard video{width:100%;max-height:calc(100dvh - 190px);aspect-ratio:9/16;object-fit:contain;background:#000;border-radius:12px}
+.howtap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);color:#fff;border-radius:999px;padding:12px 18px;font-weight:600;cursor:pointer;white-space:nowrap}
+</style>
 <title>RIDE Order</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -165,6 +172,8 @@ const CONFIG = {
   discount: 0.10,        // ส่วนลดพาร์ทเนอร์ 10% ต่อบิล
   freeAt: 5,             // ครบกี่แก้วต่อบิลได้แถม
   freeItem: "อเมริกาโน่ (แถมฟรี)",
+  // วิดีโอแนะนำวิธีสั่ง — เด้งขึ้นเองครั้งแรกที่ลูกค้าเปิดหน้านี้ (เปลี่ยนวิดีโอได้โดยอัปโหลดไฟล์ชื่อเดิมทับในโฟลเดอร์ videos)
+  howto: { gsb: "videos/howto-gsb.mp4", supalai: "videos/howto-supalai.mp4" },
   columns: 3             // จำนวนเมนูต่อแถว (2, 3 หรือ 4)
 };
 const SWEET = ["125%","100%","75%","50%","25%","0%"];
@@ -215,7 +224,8 @@ const MODES = {
 /* ===== จบส่วนตั้งค่า ===== */
 
 const $=s=>document.querySelector(s);
-const baht=n=>"฿"+n.toLocaleString("th-TH");
+const r2=n=>Math.round(Number(n||0)*100)/100;
+const baht=n=>{ n=r2(n); return "฿"+n.toLocaleString("th-TH",{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2}); };
 const params=new URLSearchParams(location.search);
 let mode=MODES[params.get("mode")]?params.get("mode"):(MODES[location.hash.slice(1)]?location.hash.slice(1):"menu");
 let cat="all", cart=[], info={}, method="delivery", liffReady=false, freeSw=null, freeBean=0;
@@ -253,7 +263,9 @@ function render(){
     perk.hidden=false; perk.dataset.p=p.key;
     perk.innerHTML=`<span class="tag">${p.label.toUpperCase()}</span>
       <span>ลด ${CONFIG.discount*100}% ทุกแก้ว · ส่งฟรีถึงที่ตั้งแต่ ${p.minDelivery} แก้วขึ้นไป</span>
-      <span>ครบ ${CONFIG.freeAt} แก้วต่อบิล รับอเมริกาโน่ฟรี 1 แก้ว</span>`;
+      <span>ครบ ${CONFIG.freeAt} แก้วต่อบิล รับอเมริกาโน่ฟรี 1 แก้ว</span>
+      ${CONFIG.howto[mode]?`<button class="howbtn" id="howBtn">▶ ดูวิดีโอวิธีสั่ง</button>`:""}`;
+    if($("#howBtn")) $("#howBtn").onclick=()=>showHowto(mode);
   } else if(m.pickup){
     perk.hidden=false; perk.dataset.p="pickup";
     perk.innerHTML=`<span class="tag">🚗 รับหน้าร้าน</span>
@@ -261,6 +273,7 @@ function render(){
       <span>เครื่องดื่มพร้อมแล้ว มาถึงกดปุ่ม "มาถึงแล้ว" ในแชต พนักงานนำไปส่งให้ที่รถ</span>`;
   } else perk.hidden=true;
   document.querySelectorAll(".demo button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===mode));
+  maybeHowto();
 
   const items=MENU.filter(i=>!i.hidden&&(!m.bestOnly||i.best));
   const cats=CATS.filter(c=>items.some(i=>i.cat===c.id));
@@ -278,20 +291,48 @@ function render(){
   renderBar();
 }
 /* แบ่งส่วนลดทั้งบิลลงรายแก้วตามสัดส่วนราคา ปัดเป็นบาทเต็ม รวมกันเท่าส่วนลดทั้งบิลพอดี (แบบบิลกลุ่ม Grab) */
+/* ---------- วิดีโอวิธีสั่ง (ครั้งแรก) ---------- */
+let howtoChecked=false;
+function maybeHowto(){
+  if(howtoChecked) return; howtoChecked=true;
+  if(!CONFIG.howto[mode]) return;
+  let seen=null; try{ seen=localStorage.getItem("rideHowto:"+mode); }catch(e){}
+  if(!seen) setTimeout(()=>showHowto(mode),400);
+}
+function showHowto(md){
+  const src=CONFIG.howto[md]; if(!src||$("#howto")) return;
+  const done=()=>{ try{ localStorage.setItem("rideHowto:"+md,String(Date.now())); }catch(e){} const b=$("#howto"); if(b){ const v=b.querySelector("video"); v&&v.pause(); b.remove(); } };
+  const box=document.createElement("div"); box.id="howto"; box.className="howto";
+  box.innerHTML=`<div class="howcard"><div class="howhead"><b>วิธีสั่งครั้งแรก</b><button class="howx" aria-label="ปิด">✕</button></div>
+    <video src="${src}" poster="${src.replace(/\.mp4$/,".jpg")}" playsinline controls preload="metadata"></video>
+    <div class="howtap" id="howTap">▶ แตะเพื่อดูวิดีโอ (มีเสียง)</div>
+    <button class="primary" id="howGo">ข้าม เริ่มสั่งเลย</button></div>`;
+  document.body.appendChild(box);
+  const v=box.querySelector("video");
+  box.querySelector(".howx").onclick=done; $("#howGo").onclick=done;
+  box.onclick=e=>{ if(e.target===box) done(); };
+  $("#howTap").onclick=()=>{ $("#howTap").remove(); v.play().catch(()=>{}); };
+  v.onplay=()=>{ const t=$("#howTap"); t&&t.remove(); };
+  v.onended=()=>{ $("#howGo").textContent="เริ่มสั่งเลย"; };
+  v.onerror=()=>{ box.remove(); }; // ยังไม่มีไฟล์วิดีโอ → ไม่แสดง
+}
+
 function cupSplit(lines, disc){
   const cups=[]; lines.forEach((l,i)=>{ for(let n=0;n<l.qty;n++) cups.push({i,name:l.name,opts:l.opts||[],price:l.price,disc:0}); });
   const sub=cups.reduce((a,c)=>a+c.price,0);
   if(disc&&sub){
-    const raw=cups.map(c=>c.price*disc/sub); raw.forEach((r,k)=>cups[k].disc=Math.floor(r));
-    let left=disc-cups.reduce((a,c)=>a+c.disc,0);
-    raw.map((r,k)=>[r-Math.floor(r),k]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).forEach(([,k])=>{ if(left>0){ cups[k].disc++; left--; } });
+    // ไม่ปัดเศษ: ส่วนลดแต่ละแก้วคิดตามสัดส่วนราคาถึงหลักสตางค์ (คิดเป็นสตางค์ กันเลขทศนิยมเพี้ยน)
+    const D=Math.round(disc*100), raw=cups.map(c=>c.price*100*D/(sub*100));
+    raw.forEach((r,k)=>cups[k].d=Math.floor(r)); let left=D-cups.reduce((a,c)=>a+c.d,0);
+    raw.map((r,k)=>[r-Math.floor(r),k]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).forEach(([,k])=>{ if(left>0){ cups[k].d++; left--; } });
+    cups.forEach(c=>c.disc=c.d/100);
   }
-  cups.forEach(c=>c.net=c.price-c.disc);
+  cups.forEach(c=>c.net=r2(c.price-c.disc));
   return cups;
 }
 function netLines(lines, disc){
   const cups=cupSplit(lines,disc);
-  return lines.map((l,i)=>({gross:l.qty*l.price,net:cups.filter(c=>c.i===i).reduce((a,c)=>a+c.net,0)}));
+  return lines.map((l,i)=>({gross:l.qty*l.price,net:r2(cups.filter(c=>c.i===i).reduce((a,c)=>a+c.net,0))}));
 }
 function splitHtml(lines, disc, free){
   const cups=cupSplit(lines,disc);
@@ -304,9 +345,9 @@ function totals(){
   const p=MODES[mode].partner;
   const cups=cart.reduce((a,l)=>a+l.qty,0);
   const sub=cart.reduce((a,l)=>a+l.qty*l.price,0);
-  const disc=p?Math.round(sub*CONFIG.discount):0;
+  const disc=p?r2(sub*CONFIG.discount):0; // ไม่ปัดเศษ
   const free=p&&cups>=CONFIG.freeAt;
-  return {cups,sub,disc,free,total:sub-disc};
+  return {cups,sub,disc,free,total:r2(sub-disc)};
 }
 function renderBar(){
   const t=totals();
@@ -474,7 +515,7 @@ function previewBubble(o){
     <div class="r"><span>${o.p?"รวมราคาเต็ม":"รวม"} ${o.t.cups} แก้ว</span><span>${baht(o.t.sub)}</span></div>
     ${o.p?`<div class="r" style="color:#1DB446"><span>ส่วนลด ${CONFIG.discount*100}% (หักในแต่ละแก้วแล้ว)</span><span>−${baht(o.t.disc)}</span></div>`:""}
     <div class="r"><b>ยอดชำระ</b><b>${baht(o.t.total)}</b></div><hr>
-    ${o.p&&o.t.disc?`<b>แยกจ่ายรายแก้ว</b>${cupSplit(o.lines,o.t.disc).map((c,k)=>`<div class="r" style="font-size:12px"><span>${k+1}. ${c.name}</span><span style="color:#888">${c.price}−${c.disc}</span><b>${baht(c.net)}</b></div>`).join("")}${o.free?`<div class="r" style="font-size:12px;color:#1DB446"><span>${cupSplit(o.lines,0).length+1}. ${CONFIG.freeItem}</span><b>฿0</b></div>`:""}<hr>`:""}
+    ${o.p&&o.t.disc?`<b>แยกจ่ายรายแก้ว</b>${cupSplit(o.lines,o.t.disc).map((c,k)=>`<div class="r" style="font-size:12px"><span>${k+1}. ${c.name}</span><span style="color:#888">${c.price}−${r2(c.disc)}</span><b>${baht(c.net)}</b></div>`).join("")}${o.free?`<div class="r" style="font-size:12px;color:#1DB446"><span>${cupSplit(o.lines,0).length+1}. ${CONFIG.freeItem}</span><b>฿0</b></div>`:""}<hr>`:""}
     <b>${o.method==="delivery"?"🛵 ส่งถึงที่":o.pk?"🚗 รับหน้าร้าน":"🏪 รับที่ร้าน"}</b>
     ${o.p?o.p.fields.map(f=>`<div>${f.label}: ${o.info[f.id]||"-"}</div>`).join(""):""}
     ${o.pk?o.pk.fields.filter(f=>(o.info[f.id]||"").trim()).map(f=>`<div>${f.label.replace(/ \(ถ้ามี\)/,"")}: ${o.info[f.id].replace(/[<>&]/g,"")}</div>`).join(""):""}
