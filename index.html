@@ -9,6 +9,14 @@
 .howhead{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
 .howx{background:transparent;border:0;color:inherit;font-size:20px;cursor:pointer;padding:2px 6px}
 .howcard video{width:100%;max-height:calc(100dvh - 190px);aspect-ratio:9/16;object-fit:contain;background:#000;border-radius:12px}
+.mcard{gap:12px;padding:16px}
+.mtag{font-family:var(--display);font-weight:600;letter-spacing:.24em;font-size:12px;color:var(--muted)}
+.mtitle{font-family:var(--display);font-weight:700;font-size:44px;line-height:.95;letter-spacing:.02em}
+.msoon{font-weight:600;font-size:17px;color:#C9D3F5}
+.mlist{display:grid;gap:8px}
+.mperk{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.mperk span{font-size:22px}.mperk b{display:block;font-size:15px}.mperk small{display:block;color:var(--muted);font-size:12.5px}
+.mnote{color:var(--muted);font-size:13px}
 .howtap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);color:#fff;border-radius:999px;padding:12px 18px;font-weight:600;cursor:pointer;white-space:nowrap}
 </style>
 <title>RIDE Order</title>
@@ -217,6 +225,7 @@ const MODES = {
   best:{title:"เมนูแนะนำประจำร้าน", bestOnly:true},
   gsb:{title:"สิทธิพิเศษพนักงานออมสิน", partner:{key:"gsb", label:"พนักงานออมสิน สาขาบงคำ", minDelivery:1,
         fields:[{id:"name",label:"ชื่อ"},{id:"floor",label:"ชั้น"}]}},
+  member:{title:"RIDE MEMBER", member:true},   // ปุ่มริชเมนูช่อง F: เด้งหน้า RIDE MEMBER แล้วต่อไปหน้าเมนู
   pickup:{title:"สั่งแล้วรับหน้าร้าน", pickup:{fields:[{id:"name",label:"ชื่อผู้รับ"},{id:"car",label:"ทะเบียน / สีรถ (ถ้ามี)",optional:true}]}},
   supalai:{title:"สิทธิพิเศษเพื่อนบ้านศุภาลัย", partner:{key:"supalai", label:"เพื่อนบ้านศุภาลัย", minDelivery:2,
         fields:[{id:"house",label:"บ้านเลขที่"},{id:"soi",label:"ซอย"}]}}
@@ -253,6 +262,7 @@ function repriceCart(){
     l.name=it.name; l.price=it.price+MILKS.reduce((a,m)=>a+(l.opts.includes(m.name)?m.add:0),0)+(l.opts.includes("เกรดพิธี")?UJI.add:0); return true; });
 }
 function render(){
+  if(MODES[mode].member){ mode="menu"; showMember(); }
   if(loadedMode!==mode) loadCart();
   repriceCart(); saveCart();
   const m=MODES[mode];
@@ -291,6 +301,24 @@ function render(){
   renderBar();
 }
 /* แบ่งส่วนลดทั้งบิลลงรายแก้วตามสัดส่วนราคา ปัดเป็นบาทเต็ม รวมกันเท่าส่วนลดทั้งบิลพอดี (แบบบิลกลุ่ม Grab) */
+/* ---------- RIDE MEMBER (เด้งขึ้นเมื่อกดปุ่มช่อง F) ---------- */
+function showMember(){
+  if($("#member")) return;
+  const box=document.createElement("div"); box.id="member"; box.className="howto";
+  const perk=(i,t,d)=>`<div class="mperk"><span>${i}</span><div><b>${t}</b><small>${d}</small></div></div>`;
+  box.innerHTML=`<div class="howcard mcard">
+    <div class="howhead"><span class="mtag">RIDE COFFEE</span><button class="howx" aria-label="ปิด">✕</button></div>
+    <div class="mtitle">RIDE<br>MEMBER</div>
+    <div class="msoon">กำลังจะมาเร็ว ๆ นี้ครับ ✨</div>
+    <div class="mlist">${perk("⭐","สะสมแต้ม","ทุกแก้วที่สั่ง แลกรับเครื่องดื่มฟรี")}${perk("🎁","รับสิทธิ์สมาชิก","ส่วนลดและสิทธิพิเศษเฉพาะสมาชิก")}${perk("🎂","Birthday Privilege","ของขวัญในเดือนเกิด")}${perk("🏷️","โปรโมชั่นพิเศษ","แจ้งก่อนใครในแชตนี้")}</div>
+    <div class="mnote">เปิดให้สมัครเมื่อไร ร้านจะแจ้งในแชต RiDE Cafe ครับ 🙏</div>
+    <button class="primary" id="memGo">ดูเมนู · สั่งเครื่องดื่มเลย</button></div>`;
+  document.body.appendChild(box);
+  const close=()=>box.remove();
+  box.querySelector(".howx").onclick=close; $("#memGo").onclick=close;
+  box.onclick=e=>{ if(e.target===box) close(); };
+}
+
 /* ---------- วิดีโอวิธีสั่ง (ครั้งแรก) ---------- */
 let howtoChecked=false;
 function maybeHowto(){
@@ -321,11 +349,9 @@ function cupSplit(lines, disc){
   const cups=[]; lines.forEach((l,i)=>{ for(let n=0;n<l.qty;n++) cups.push({i,name:l.name,opts:l.opts||[],price:l.price,disc:0}); });
   const sub=cups.reduce((a,c)=>a+c.price,0);
   if(disc&&sub){
-    // ไม่ปัดเศษ: ส่วนลดแต่ละแก้วคิดตามสัดส่วนราคาถึงหลักสตางค์ (คิดเป็นสตางค์ กันเลขทศนิยมเพี้ยน)
-    const D=Math.round(disc*100), raw=cups.map(c=>c.price*100*D/(sub*100));
-    raw.forEach((r,k)=>cups[k].d=Math.floor(r)); let left=D-cups.reduce((a,c)=>a+c.d,0);
-    raw.map((r,k)=>[r-Math.floor(r),k]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).forEach(([,k])=>{ if(left>0){ cups[k].d++; left--; } });
-    cups.forEach(c=>c.disc=c.d/100);
+    const raw=cups.map(c=>c.price*disc/sub); raw.forEach((r,k)=>cups[k].disc=Math.floor(r));
+    let left=disc-cups.reduce((a,c)=>a+c.disc,0);
+    raw.map((r,k)=>[r-Math.floor(r),k]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).forEach(([,k])=>{ if(left>0){ cups[k].disc++; left--; } });
   }
   cups.forEach(c=>c.net=r2(c.price-c.disc));
   return cups;
@@ -345,7 +371,7 @@ function totals(){
   const p=MODES[mode].partner;
   const cups=cart.reduce((a,l)=>a+l.qty,0);
   const sub=cart.reduce((a,l)=>a+l.qty*l.price,0);
-  const disc=p?r2(sub*CONFIG.discount):0; // ไม่ปัดเศษ
+  const disc=p?Math.round(sub*CONFIG.discount):0; // ปัดเป็นบาทเต็ม (รอผู้บริหารเคาะ)
   const free=p&&cups>=CONFIG.freeAt;
   return {cups,sub,disc,free,total:r2(sub-disc)};
 }
