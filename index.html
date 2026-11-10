@@ -196,6 +196,7 @@ let CATS = [
 const BEANS = [{name:"Long Drive", note:"คั่วกลางค่อนเข้ม"},{name:"View Point", note:"คั่วกลาง"}];
 const MILKS = [{name:"นมวัว", add:0},{name:"นมโอ๊ต", add:0},{name:"Lactose-Free", add:5}];
 const UJI = {name:"มัทฉะเกรดพิธี (Uji Ceremony)", add:30};
+const HONEY = {name:"น้ำผึ้ง", add:5, items:["americano"]}; // ท็อปปิ้งน้ำผึ้ง (เมนูที่มีให้เลือก)
 /* เมนู: image = ชื่อไฟล์ในโฟลเดอร์ images/ (เว้นว่างได้), best = เมนูแนะนำ, milk:true = เลือกนมได้ */
 let MENU = [   /* สำรอง: หน้าเว็บอ่านเมนูจริงจากไฟล์ menu.json (แก้ผ่านหน้า admin) */
   {id:"americano", cat:"black", name:"อเมริกาโน่", en:"Americano", price:65, image:""},
@@ -259,7 +260,7 @@ function loadCart(){
 }
 function repriceCart(){
   cart=cart.filter(l=>{ const it=MENU.find(x=>x.id===l.id); if(!it||it.hidden||it.soldout) return false;
-    l.name=it.name; l.price=it.price+MILKS.reduce((a,m)=>a+(l.opts.includes(m.name)?m.add:0),0)+(l.opts.includes("เกรดพิธี")?UJI.add:0); return true; });
+    l.name=it.name; l.price=it.price+MILKS.reduce((a,m)=>a+(l.opts.includes(m.name)?m.add:0),0)+(l.opts.includes("เกรดพิธี")?UJI.add:0)+(l.opts.includes(HONEY.name)?HONEY.add:0); return true; });
 }
 function render(){
   if(MODES[mode].member){ mode="menu"; showMember(); }
@@ -386,16 +387,17 @@ function closeSheet(){ $("#sheet").hidden=true; $("#scrim").hidden=true; }
 
 function pickSheet(id, editIdx){
   const i=MENU.find(x=>x.id===id), c=catOf(i.cat);
-  let sw=null, bean=c.coffee?0:null, milk=i.milk?0:null, uji=false, q=1, note="";
+  let sw=null, bean=c.coffee?0:null, milk=i.milk?0:null, uji=false, honey=false, q=1, note="";
+  const canHoney=HONEY.items.includes(i.id);
   const NP="📝 ", clean=t=>t.replace(/[<>&"'`]/g,"").replace(/\s+/g," ").trim().slice(0,60);
   const editing=Number.isInteger(editIdx) && cart[editIdx];
   if(editing){ const o=cart[editIdx].opts||[];
     const s0=o.find(x=>x.startsWith("หวาน ")); if(s0){ const v=s0.slice(5); sw=SWEET.includes(v)?v:null; }
     if(bean!==null){ const k=BEANS.findIndex(b=>o.includes(b.name)); if(k>=0) bean=k; }
     if(milk!==null){ const k=MILKS.findIndex(m=>o.includes(m.name)); if(k>=0) milk=k; }
-    uji=o.includes("เกรดพิธี"); q=cart[editIdx].qty;
+    uji=o.includes("เกรดพิธี"); honey=canHoney&&o.includes(HONEY.name); q=cart[editIdx].qty;
     const n0=o.find(x=>x.startsWith(NP)); if(n0) note=n0.slice(NP.length); }
-  const unit=()=>i.price+(milk!==null?MILKS[milk].add:0)+(uji?UJI.add:0);
+  const unit=()=>i.price+(milk!==null?MILKS[milk].add:0)+(uji?UJI.add:0)+(honey?HONEY.add:0);
   const seg=(key,list,sel,label)=>`<div class="seg" style="grid-template-columns:repeat(${list.length},minmax(0,1fr))">${list.map((x,n)=>`<button data-${key}="${n}" aria-pressed="${n===sel}">${label(x)}</button>`).join("")}</div>`;
   const draw=()=>{
     const pic=imgUrl(i);
@@ -406,6 +408,7 @@ function pickSheet(id, editIdx){
     ${bean!==null?`<div><div class="lbl">เมล็ดกาแฟ</div>${seg("bean",BEANS,bean,x=>`${x.name}<small>${x.note}</small>`)}</div>`:""}
     ${milk!==null?`<div><div class="lbl">นม</div>${seg("milk",MILKS,milk,x=>`${x.name}${x.add?`<small>+${baht(x.add)}</small>`:""}`)}</div>`:""}
     ${c.matcha?`<div><div class="lbl">อัปเกรดมัทฉะ</div><div class="seg" style="grid-template-columns:1fr"><button data-uji="1" aria-pressed="${uji}">${UJI.name} +${baht(UJI.add)}</button></div></div>`:""}
+    ${canHoney?`<div><div class="lbl">ท็อปปิ้ง (ไม่บังคับ)</div><div class="seg" style="grid-template-columns:1fr"><button data-honey="1" aria-pressed="${honey}">🍯 ${HONEY.name} +${baht(HONEY.add)}</button></div></div>`:""}
     <label for="i-note"><div class="lbl">หมายเหตุแก้วนี้ (ถ้ามี)</div><textarea id="i-note" rows="2" maxlength="60" placeholder="เช่น น้ำแข็งน้อย, แยกน้ำแข็ง, ไม่ใส่หลอด">${note.replace(/[<>&"]/g,"")}</textarea></label>
     <div><div class="lbl">จำนวน</div><div class="qty"><button data-q="-1" aria-label="ลด">−</button><output>${q}</output><button data-q="1" aria-label="เพิ่ม">+</button></div></div>
     <button class="primary" id="addBtn" ${sw||c.nosweet?"":"disabled"}>${sw||c.nosweet?`${editing?"บันทึกการแก้ไข":"ใส่ตะกร้า"} · ${baht(unit()*q)}`:"เลือกระดับความหวานก่อน"}</button>
@@ -419,6 +422,7 @@ function pickSheet(id, editIdx){
     else if(b.dataset.bean){bean=+b.dataset.bean;draw();}
     else if(b.dataset.milk){milk=+b.dataset.milk;draw();}
     else if(b.dataset.uji){uji=!uji;draw();}
+    else if(b.dataset.honey){honey=!honey;draw();}
     else if(b.dataset.q){q=Math.max(1,q+ +b.dataset.q);draw();}
     else if(b.id==="backBtn"){ cartSheet(); }
     else if(b.id==="addBtn" && (sw||c.nosweet)){
@@ -426,6 +430,7 @@ function pickSheet(id, editIdx){
       if(bean!==null) opts.push(BEANS[bean].name);
       if(milk!==null) opts.push(MILKS[milk].name);
       if(uji) opts.push("เกรดพิธี");
+      if(honey) opts.push(HONEY.name);
       const nt=clean(note); if(nt) opts.push(NP+nt);
       const key=i.id+"|"+opts.join("|");
       if(editing){
