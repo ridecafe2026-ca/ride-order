@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-29T03:09:49.391Z",
+ "updated": "2026-11-20T08:02:13.969Z",
  "cats": [
   {
    "id": "black",
@@ -284,6 +284,19 @@
    "milk": false,
    "soldout": false,
    "hidden": false
+  },
+  {
+   "id": "mmwooq3yr",
+   "cat": "noncoffee",
+   "name": "ช๊อกโกแลตงาดำ",
+   "en": "Chocolate Black Sesame",
+   "price": 100,
+   "image": "mmwooq3yr-mwooxzgy.jpg",
+   "best": true,
+   "milk": true,
+   "soldout": false,
+   "hidden": false,
+   "desc": "ช๊อกโกแลตเข้มข้มผสมกับเพสต์งาหอมๆมันๆ ออกมาเป็นรสชาติเข้มข้นมันนัวลงตัวกว่าที่คิด อยากให้ลอง แล้วจะติดใจ"
   }
  ]
 }
