@@ -162,7 +162,7 @@ function renderList(){
     return `<div class="cat">${label}</div><div class="list">${rows.map(({it,idx})=>`
       <div class="item${dirty.has(it.id)?" dirty":""}">
         ${thumb(it)?`<img class="thumb" src="${esc(thumb(it))}" alt="">`:`<div class="thumb"></div>`}
-        <div class="t" data-edit="${idx}"><div class="n">${esc(it.name)}</div><div class="p">฿${esc(it.price)}</div>
+        <div class="t" data-edit="${idx}"><div class="n">${esc(it.name)}</div><div class="p">${it.was>it.price?`<s style="opacity:.6">฿${esc(it.was)}</s> `:""}฿${esc(it.price)}</div>
           <div class="tags">${it.best?'<span class="tag best">แนะนำ</span>':""}${it.soldout?'<span class="tag out">หมด</span>':""}${it.hidden?'<span class="tag hid">ซ่อน</span>':""}${dirty.has(it.id)?'<span class="tag">ยังไม่บันทึก</span>':""}</div></div>
         <div class="sw"><button class="toggle" data-sold="${idx}" aria-pressed="${!it.soldout}" aria-label="มีขาย"></button>${it.soldout?"หมด":"มีขาย"}</div>
       </div>`).join("")}</div>`;
@@ -187,7 +187,8 @@ function editSheet(idx){
       <label class="f">ชื่อเมนู (ไทย)<input type="text" id="f-name" value="${esc(it.name)}"></label>
       <label class="f">ชื่อเมนู (อังกฤษ)<input type="text" id="f-en" value="${esc(it.en)}"></label>
       <label class="f">รายละเอียดสินค้า (ถ้ามี)<textarea id="f-desc" rows="3" maxlength="200" placeholder="เช่น ใช้เมล็ด Long Drive คั่วกลางค่อนเข้ม">${esc(it.desc||"")}</textarea><span class="sub">ขึ้นตัวเล็กใต้รูปเมนู เหนือระดับความหวาน เว้นว่างได้</span></label>
-      <label class="f">ราคา (บาท)<input type="number" id="f-price" inputmode="numeric" min="0" value="${esc(it.price||"")}"></label>
+      <label class="f">ราคาขาย (บาท)<input type="number" id="f-price" inputmode="numeric" min="0" value="${esc(it.price||"")}"></label>
+      <label class="f">ราคาปกติก่อนลด (ใส่เฉพาะช่วงโปร เว้นว่าง = ไม่มีโปร)<input type="number" id="f-was" inputmode="numeric" min="0" placeholder="เช่น 95" value="${esc(it.was||"")}"></label>
       <label class="f">หมวด<select id="f-cat">${CATS.map(c=>`<option value="${esc(c.id)}"${c.id===it.cat?" selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
       <div class="checks">
         <label><input type="checkbox" id="f-best"${it.best?" checked":""}> อยู่ในเมนูแนะนำ</label>
@@ -201,12 +202,13 @@ function editSheet(idx){
       ${isNew?"":`<button class="btn danger" id="del">ลบเมนูนี้</button>`}`);
     $("#pic").onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ Object.assign(it,read()); const url=URL.createObjectURL(f); const r=await cropImage(url); if(r){ photo=r; } else URL.revokeObjectURL(url); draw(); }catch(err){ $("#fErr").textContent="อ่านรูปไม่ได้ ลองรูปอื่น"; } };
     if($("#editPic")) $("#editPic").onclick=async()=>{ try{ Object.assign(it,read()); const r=await cropImage(photo?photo.orig:thumb(it), photo&&photo.state); if(r){ photo=r; draw(); } }catch(err){ $("#fErr").textContent="เปิดรูปนี้แก้ไม่ได้ ลองเลือกรูปใหม่"; } };
-    const read=()=>({...it,name:$("#f-name").value.trim(),en:$("#f-en").value.trim(),desc:$("#f-desc").value.trim(),price:Math.round(+$("#f-price").value),cat:$("#f-cat").value,
+    const read=()=>({...it,name:$("#f-name").value.trim(),en:$("#f-en").value.trim(),desc:$("#f-desc").value.trim(),price:Math.round(+$("#f-price").value),was:Math.round(+$("#f-was").value)||0,cat:$("#f-cat").value,
       best:$("#f-best").checked,milk:$("#f-milk").checked,soldout:$("#f-sold").checked,hidden:$("#f-hidden").checked});
     $("#ok").onclick=()=>{
       const v=read();
       if(!v.name){ $("#fErr").textContent="ใส่ชื่อเมนูก่อน"; return; }
       if(!(v.price>0)){ $("#fErr").textContent="ใส่ราคาเป็นตัวเลข"; return; }
+      if(v.was && v.was<=v.price){ $("#fErr").textContent="ราคาปกติก่อนลด ต้องมากกว่าราคาขาย (ถ้าไม่มีโปรให้เว้นว่าง)"; return; }
       if(photo) pending[v.id]=photo;
       if(isNew) items.push(v); else items[idx]=v;
       markDirty(v.id); closeSheet(); renderList();

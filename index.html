@@ -123,6 +123,10 @@ h1{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;mar
 .grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 6px}
 .sheet h2{font-family:var(--display);font-weight:600;font-size:21px;margin:0}
 .lbl{font-size:14px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.price .was,.g2 .was{color:var(--muted);font-weight:400;font-size:.8em;text-decoration:line-through;margin-right:2px}
+.sale{position:absolute;right:8px;bottom:8px;background:#E5322D;color:#fff;font-family:var(--display);font-weight:600;font-size:12px;line-height:1;padding:5px 8px;border-radius:999px}
+.grid[data-cols="4"] .sale{font-size:9px;padding:3px 5px;right:4px;bottom:4px}
+.g2 .now{color:var(--accent-2);font-family:var(--display);font-size:16px}.saletag{background:#E5322D;color:#fff;font-size:11.5px;padding:2px 7px;border-radius:999px;margin-left:4px}
 .desc{margin:-4px 0 0;font-size:13.5px;line-height:1.55;color:var(--muted);white-space:pre-line}
 .seg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .seg button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 4px;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -319,8 +323,8 @@ function render(){
   $("#grid").innerHTML=items.filter(i=>cat==="all"||i.cat===cat).map(i=>{
     const n=cart.filter(l=>l.id===i.id).reduce((a,l)=>a+l.qty,0);
     const u=imgUrl(i);
-    return `<button class="card${n?" has":""}${i.soldout?" out":""}" ${i.soldout?"disabled":`data-add="${i.id}"`} aria-label="สั่ง ${i.name}"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}${i.soldout?'<span class="soldout">หมดชั่วคราว</span>':""}</div>
-      <div class="info"><div class="name">${i.name}<small class="en">${i.en||""}</small></div><div class="price">${baht(i.price)}</div>
+    return `<button class="card${n?" has":""}${i.soldout?" out":""}" ${i.soldout?"disabled":`data-add="${i.id}"`} aria-label="สั่ง ${i.name}"><div class="pic">${u?`<img src="${u}" alt="${i.name}" loading="lazy">`:cup(catOf(i.cat).tint)}${i.best&&!m.bestOnly?'<span class="badge">แนะนำ</span>':""}${i.was>i.price?'<span class="sale">ราคาพิเศษ</span>':""}${i.soldout?'<span class="soldout">หมดชั่วคราว</span>':""}</div>
+      <div class="info"><div class="name">${i.name}<small class="en">${i.en||""}</small></div><div class="price">${i.was>i.price?`<s class="was">${baht(i.was)}</s> `:""}${baht(i.price)}</div>
       ${n?`<div class="inCart">✓ ในตะกร้า ${n} แก้ว</div>`:""}</div></button>`;
   }).join("");
   renderBar();
@@ -448,7 +452,7 @@ function pickSheet(id, editIdx){
   const seg=(key,list,sel,label)=>`<div class="seg" style="grid-template-columns:repeat(${list.length},minmax(0,1fr))">${list.map((x,n)=>`<button data-${key}="${n}" aria-pressed="${n===sel}">${label(x)}</button>`).join("")}</div>`;
   const draw=()=>{
     const pic=imgUrl(i);
-    openSheet(`<div><h2>${i.name}</h2><div class="g2">${i.en||""} · ${baht(i.price)}</div></div>
+    openSheet(`<div><h2>${i.name}</h2><div class="g2">${i.en||""} · ${i.was>i.price?`<s class="was">${baht(i.was)}</s> <b class="now">${baht(i.price)}</b> <span class="saletag">ราคาพิเศษ</span>`:baht(i.price)}</div></div>
     ${pic?`<img class="hero" src="${pic}" alt="">`:""}
     ${i.desc?`<p class="desc">${String(i.desc).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}</p>`:""}
     ${c.nosweet?"":`<div><div class="lbl">ระดับความหวาน <span class="req">ต้องเลือก</span></div>${seg("sw",SWEET,SWEET.indexOf(sw),x=>x).replace("repeat(6,","repeat(3,")}</div>`}
