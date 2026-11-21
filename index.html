@@ -9,6 +9,30 @@
 .howhead{display:flex;justify-content:space-between;align-items:center;padding:0 2px}
 .howx{background:transparent;border:0;color:inherit;font-size:20px;cursor:pointer;padding:2px 6px}
 .howcard video{width:100%;max-height:calc(100dvh - 190px);aspect-ratio:9/16;object-fit:contain;background:#000;border-radius:12px}
+.howcard.mem{padding:0;gap:0;overflow:hidden;background:#F3F5FA;color:#0A1230;border:0}
+.memtop{background:#0A1230;color:#fff;padding:18px 16px 16px;display:grid;gap:14px}
+.memhead{display:flex;justify-content:space-between;align-items:flex-start}
+.memhead .mtag{color:#9DB4FF}.memhead .howx{color:#fff;min-width:44px;min-height:44px}
+.memtitle{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.05;letter-spacing:.02em}
+.memcard{background:#131D45;border:1px solid #2A3668;border-radius:16px;padding:16px;display:grid;gap:14px}
+.memcard small,.mempts small{display:block;font-size:12px;color:#C9D3F5}
+.memwho{display:flex;gap:12px;align-items:center}.memwho b{font-family:var(--display);font-weight:500;font-size:18px;word-break:break-word}
+.memav{flex:0 0 44px;height:44px;border-radius:50%;background:#9DB4FF;color:#0A1230;display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:20px}
+.memrow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.memcode{font-family:var(--display);font-weight:700;font-size:54px;line-height:1;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.mempts{text-align:right}.mempts div{font-family:var(--display);font-weight:700;font-size:36px;line-height:1;color:#9DB4FF}
+.memhint{font-size:13px;color:#C9D3F5}.memload{font-size:14px;color:#C9D3F5;padding:8px 0;line-height:1.6}
+.memretry{margin-top:8px;border:1px solid #9DB4FF;background:transparent;color:#fff;border-radius:10px;padding:10px 16px}
+.membody{padding:14px 16px 4px;display:grid;gap:10px;overflow:auto;min-height:0}
+.memrule{background:#fff;border-radius:14px;padding:12px 14px}.memrule b{display:block;font-family:var(--display);font-weight:600;font-size:16px}.memrule small{color:#55607A;font-size:13px}
+.memsec{font-family:var(--display);font-weight:600;font-size:15px}
+.memlist{background:#fff;border-radius:14px;padding:2px 14px}
+.memh{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #E6EAF3}.memh:last-child{border-bottom:0}
+.memh b{display:block;font-weight:500;font-size:14px}.memh small{color:#55607A;font-size:12px}
+.memh span{font-family:var(--display);font-weight:600;font-size:16px;color:#2F49B8}.memh span.neg{color:#B3261E}
+.memempty{padding:14px 0;color:#55607A;font-size:13.5px;text-align:center}
+.memnote{color:#55607A;font-size:13px;text-align:center}
+.memfoot{padding:10px 16px 16px}.memfoot .primary{background:#0A1230;color:#fff}
 .mcard{gap:12px;padding:16px}
 .mtag{font-family:var(--display);font-weight:600;letter-spacing:.24em;font-size:12px;color:var(--muted)}
 .mtitle{font-family:var(--display);font-weight:700;font-size:44px;line-height:.95;letter-spacing:.02em}
@@ -306,18 +330,41 @@ function render(){
 function showMember(){
   if($("#member")) return;
   const box=document.createElement("div"); box.id="member"; box.className="howto";
-  const perk=(i,t,d)=>`<div class="mperk"><span>${i}</span><div><b>${t}</b><small>${d}</small></div></div>`;
-  box.innerHTML=`<div class="howcard mcard">
-    <div class="howhead"><span class="mtag">RIDE COFFEE</span><button class="howx" aria-label="ปิด">✕</button></div>
-    <div class="mtitle">RIDE<br>MEMBER</div>
-    <div class="msoon">กำลังจะมาเร็ว ๆ นี้ครับ ✨</div>
-    <div class="mlist">${perk("⭐","สะสมแต้ม","ทุกแก้วที่สั่ง แลกรับเครื่องดื่มฟรี")}${perk("🎁","รับสิทธิ์สมาชิก","ส่วนลดและสิทธิพิเศษเฉพาะสมาชิก")}${perk("🎂","Birthday Privilege","ของขวัญในเดือนเกิด")}${perk("🏷️","โปรโมชั่นพิเศษ","แจ้งก่อนใครในแชตนี้")}</div>
-    <div class="mnote">เปิดให้สมัครเมื่อไร ร้านจะแจ้งในแชต RiDE Cafe ครับ 🙏</div>
-    <button class="primary" id="memGo">ดูเมนู · สั่งเครื่องดื่มเลย</button></div>`;
+  box.innerHTML=`<div class="howcard mem">
+    <div class="memtop">
+      <div class="memhead"><div><span class="mtag">RIDE COFFEE</span><div class="memtitle">RIDE MEMBER</div></div><button class="howx" aria-label="ปิด">✕</button></div>
+      <div class="memcard" id="memCard"><div class="memload">กำลังโหลดข้อมูลสมาชิก…</div></div>
+    </div>
+    <div class="membody" id="memBody"></div>
+    <div class="memfoot"><button class="primary" id="memGo">ดูเมนู · สั่งเครื่องดื่มเลย</button></div></div>`;
   document.body.appendChild(box);
   const close=()=>box.remove();
   box.querySelector(".howx").onclick=close; $("#memGo").onclick=close;
   box.onclick=e=>{ if(e.target===box) close(); };
+  loadMember();
+}
+const mEsc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function loadMember(){
+  const card=()=>$("#memCard"), msg=t=>{ if(card()) card().innerHTML=`<div class="memload">${t}</div>`; };
+  for(let i=0;i<40 && !liffReady;i++) await new Promise(r=>setTimeout(r,250));   // รอ LINE พร้อม (สูงสุด 10 วินาที)
+  if(!liffReady || !liff.isLoggedIn()){ msg("เปิดหน้านี้จากปุ่ม RIDE MEMBER ในแชต LINE ของร้าน เพื่อดูรหัสสมาชิกและคะแนนครับ"); return; }
+  try{
+    const r=await fetch(CONFIG.api+"/api/member/me",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({accessToken:liff.getAccessToken()})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error||"โหลดข้อมูลสมาชิกไม่สำเร็จ");
+    if(!card()) return;
+    const name=d.name||"สมาชิก RIDE";
+    card().innerHTML=`<div class="memwho"><div class="memav">${mEsc([...name][0]||"R")}</div><div><small>ชื่อ LINE</small><b>${mEsc(name)}</b></div></div>
+      <div class="memrow"><div><small>รหัสสมาชิก</small><div class="memcode">${mEsc(d.code)}</div></div><div class="mempts"><small>คะแนนสะสม</small><div>${Number(d.points)||0}</div></div></div>
+      <div class="memhint">ซื้อหน้าร้าน แจ้งรหัส 4 หลักนี้กับพนักงานเพื่อรับคะแนนครับ</div>`;
+    const fmt=t=>new Date(t).toLocaleString("th-TH",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+    const label=h=>h.type==="line"?`สั่งผ่าน LINE #${mEsc(h.no)} · ฿${h.amount}`:h.type==="redeem"?`แลกของรางวัล${h.note?" · "+mEsc(h.note):""}`:`ซื้อหน้าร้าน · ฿${h.amount}`;
+    const hist=(d.history||[]).map(h=>`<div class="memh"><div><b>${label(h)}</b><small>${fmt(h.at)}</small></div><span class="${h.points<0?"neg":""}">${h.points>0?"+":""}${h.points}</span></div>`).join("");
+    $("#memBody").innerHTML=`<div class="memrule"><b>ทุก ${d.bahtPerPoint||50} บาท = 1 คะแนน</b><small>สั่งผ่าน LINE ได้คะแนนอัตโนมัติ เมื่อร้านยืนยันรับเงินแล้วครับ</small></div>
+      <div class="memsec">ประวัติคะแนน</div>
+      <div class="memlist">${hist||`<div class="memempty">ยังไม่มีคะแนน เริ่มสะสมได้ตั้งแต่ออเดอร์ถัดไปครับ</div>`}</div>
+      <div class="memnote">ของรางวัลสำหรับแลกคะแนน จะประกาศเร็ว ๆ นี้ครับ</div>`;
+  }catch(e){ msg(mEsc(e.message||e)+`<br><button class="memretry" id="memRetry">ลองใหม่</button>`); const b=$("#memRetry"); if(b) b.onclick=()=>{ msg("กำลังโหลดข้อมูลสมาชิก…"); loadMember(); }; }
 }
 
 /* ---------- วิดีโอวิธีสั่ง (ครั้งแรก) ---------- */

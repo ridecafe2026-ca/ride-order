@@ -32,6 +32,16 @@ h1{font-family:var(--display);font-size:24px;margin:0}
 .btn.ghost{background:transparent;border:1px solid var(--line)}
 .btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.ptform{display:grid;gap:8px;max-width:460px}.ptlbl{font-family:var(--display);font-weight:500;font-size:15px;margin-top:4px}
+.ptin{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-family:var(--display);font-weight:700;font-size:30px;font-variant-numeric:tabular-nums}
+.ptin.code{letter-spacing:.2em}.ptin:focus{outline:2px solid var(--accent);border-color:transparent}
+.ptwho{border-radius:12px;padding:10px 14px;background:var(--surface-2)}.ptwho small{display:block;color:var(--muted);font-size:13px}.ptwho b{font-family:var(--display);font-size:19px}
+.ptwho.ok{background:rgba(61,214,140,.14);border:1px solid var(--paid)}.ptwho.bad{border:1px solid var(--bad);color:var(--bad)}
+.ptcalc{background:var(--bg);border-radius:12px;padding:12px 14px;color:var(--muted)}.ptcalc b{color:var(--fg);font-family:var(--display);font-size:20px}
+.ptgo{padding:15px;font-size:18px}
+.ptrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);color:var(--fg)}.ptrow:last-child{border-bottom:0}
+.ptrow>div{flex:1;min-width:0}.ptrow small{display:block;color:var(--muted);font-size:13px}.ptrow span{font-family:var(--display);font-weight:600;font-size:18px;color:var(--accent-2)}
+.ptrow.void{opacity:.5}.ptrow.void span{text-decoration:line-through}
 input[type=password],input[type=date],input[type=month],#resetTxt{color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
 .login{max-width:380px;margin:12vh auto 0;background:var(--surface);border-radius:16px;padding:22px;display:grid;gap:12px}
 .err{color:var(--bad);font-size:14px}
@@ -107,7 +117,7 @@ td.n,th.n{text-align:right}
   <div id="app" hidden>
     <header>
       <h1>RIDE ออเดอร์</h1>
-      <div class="tabs"><button class="tab" data-tab="orders" aria-pressed="true">ออเดอร์</button><button class="tab" data-tab="summary" id="sumTab" hidden>สรุปยอด</button><button class="tab" id="logout">ออก</button></div>
+      <div class="tabs"><button class="tab" data-tab="orders" aria-pressed="true">ออเดอร์</button><button class="tab" data-tab="points">ให้คะแนน</button><button class="tab" data-tab="summary" id="sumTab" hidden>สรุปยอด</button><button class="tab" id="logout">ออก</button></div>
     </header>
 
     <section id="ordersView">
@@ -120,6 +130,22 @@ td.n,th.n{text-align:right}
       <div id="daysum"></div>
       <div class="chips" id="chips"></div>
       <div class="grid" id="list"></div>
+    </section>
+
+    <section id="pointsView" hidden>
+      <div class="panel ptform">
+        <h2>ให้คะแนนหน้าร้าน (RIDE MEMBER)</h2>
+        <label class="ptlbl" for="ptCode">1. รหัสสมาชิก 4 หลัก</label>
+        <input id="ptCode" class="ptin code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000">
+        <div class="ptwho" id="ptWho" hidden></div>
+        <label class="ptlbl" for="ptAmt">2. ยอดเงินในบิล (บาท)</label>
+        <input id="ptAmt" class="ptin" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="0">
+        <div class="ptcalc" id="ptCalc">ระบบคิดให้อัตโนมัติ: ทุก 50 บาท = 1 คะแนน (เศษปัดทิ้ง)</div>
+        <button class="btn blue ptgo" id="ptGo" disabled>ยืนยันให้คะแนน</button>
+        <div class="sub" id="ptMsg"></div>
+      </div>
+      <div class="panel"><h2>ให้คะแนนวันนี้</h2><div id="ptRecent" class="sub">ยังไม่มีรายการ</div></div>
+      <div class="panel" id="ptOwner" hidden><h2>สมาชิกทั้งหมด</h2><div id="ptMembers" class="sub"></div></div>
     </section>
 
     <section id="summaryView" hidden>
@@ -164,7 +190,7 @@ async function login(){
 $("#loginBtn").onclick=()=>{ key=$("#pw").value.trim(); login(); };
 $("#pw").onkeydown=e=>{ if(e.key==="Enter") $("#loginBtn").click(); };
 $("#logout").onclick=()=>{ try{localStorage.removeItem("rideAdminKey");}catch(e){} key=""; clearInterval(timer); $("#pw").value=""; $("#loginErr").textContent=""; $("#app").hidden=true; $("#login").hidden=false; };
-document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-pressed",x===b)); $("#ordersView").hidden=b.dataset.tab!=="orders"; $("#summaryView").hidden=b.dataset.tab!=="summary"; if(b.dataset.tab==="summary") loadSummary(); });
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-pressed",x===b)); $("#ordersView").hidden=b.dataset.tab!=="orders"; $("#summaryView").hidden=b.dataset.tab!=="summary"; $("#pointsView").hidden=b.dataset.tab!=="points"; if(b.dataset.tab==="summary") loadSummary(); if(b.dataset.tab==="points") openPoints(); });
 $("#notify").onchange=()=>{ try{localStorage.setItem("rideNotify",$("#notify").checked?"1":"0");}catch(e){} };
 $("#day").onchange=()=>{ seen=null; loadOrders(); };
 $("#soundBtn").onclick=()=>{ soundOn=!soundOn; if(soundOn){ audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); beep(); } $("#soundBtn").textContent=soundOn?"🔔 เสียงแจ้งเตือน: เปิด":"🔕 เปิดเสียงแจ้งเตือน"; };
@@ -266,6 +292,53 @@ document.addEventListener("click",async e=>{
   }catch(err){ b.disabled=false; b.textContent=old; alert0(err.message); }
 });
 function alert0(m){ $("#sync").textContent="ไม่สำเร็จ: "+m; $("#sync").style.color="var(--bad)"; setTimeout(()=>$("#sync").style.color="",6000); }
+
+/* ---------- RIDE MEMBER: ให้คะแนนหน้าร้าน ---------- */
+let ptMember=null, ptForce=false, ptSeq=0;
+const ptAmount=()=>Math.floor(Number($("#ptAmt").value.replace(/\D/g,""))||0);
+function ptUpdate(){
+  const a=ptAmount(), p=Math.floor(a/50);
+  $("#ptCalc").innerHTML=a?`${baht(a)} ÷ 50 = <b>${p} คะแนน</b>${a%50?" (เศษปัดทิ้ง)":""}`:"ระบบคิดให้อัตโนมัติ: ทุก 50 บาท = 1 คะแนน (เศษปัดทิ้ง)";
+  $("#ptGo").disabled=!(ptMember&&p>=1);
+  $("#ptGo").textContent=ptForce?"ยืนยันอีกครั้ง (คนละบิล)":"ยืนยันให้คะแนน";
+}
+async function ptLookup(){
+  const code=$("#ptCode").value.replace(/\D/g,"").slice(0,4); $("#ptCode").value=code; ptMember=null; ptForce=false;
+  const w=$("#ptWho"); w.hidden=code.length!==4; w.className="ptwho"; ptUpdate();
+  if(code.length!==4) return;
+  const seq=++ptSeq; w.textContent="กำลังค้นหา…";
+  try{ const d=await (await api("/api/member/lookup?code="+code)).json(); if(seq!==ptSeq) return;
+    ptMember=d; w.className="ptwho ok"; w.innerHTML=`<small>พบสมาชิก · ปัจจุบัน ${d.points} คะแนน</small><b>${esc(d.name)}</b>`; $("#ptAmt").focus(); }
+  catch(e){ if(seq!==ptSeq) return; w.className="ptwho bad"; w.textContent=e.message; }
+  ptUpdate();
+}
+$("#ptCode").oninput=ptLookup;
+$("#ptAmt").oninput=()=>{ $("#ptAmt").value=$("#ptAmt").value.replace(/\D/g,""); ptForce=false; ptUpdate(); };
+$("#ptGo").onclick=async()=>{
+  if(!ptMember) return; const b=$("#ptGo"); b.disabled=true;
+  try{
+    const d=await (await api("/api/member/grant",{method:"POST",body:JSON.stringify({code:ptMember.code,amount:ptAmount(),force:ptForce})})).json();
+    $("#ptMsg").innerHTML=`✅ ให้ <b>${esc(d.name)}</b> (รหัส ${esc(d.code)}) +${d.added} คะแนน · รวม ${d.points} คะแนน`;
+    $("#ptCode").value=""; $("#ptAmt").value=""; ptMember=null; ptForce=false; $("#ptWho").hidden=true; ptUpdate(); loadPoints(); $("#ptCode").focus();
+  }catch(e){ $("#ptMsg").textContent="⚠️ "+e.message; ptForce=e.status===409; ptUpdate(); }
+};
+async function loadPoints(){
+  try{
+    const d=await (await api("/api/member/recent?date="+bkkToday())).json();
+    $("#ptRecent").innerHTML=d.rows.length?d.rows.map(r=>{
+      const t=new Date(r.created_at).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+      const what=r.kind==="redeem"?`แลกของรางวัล${r.note?" · "+esc(r.note):""}`:baht(r.amount);
+      return `<div class="ptrow${r.void_at?" void":""}"><div><b>${esc(r.code)} · ${esc(r.name||"")}</b><small>${t} · ${what}${r.void_at?" · ยกเลิกแล้ว":""}</small></div><span>${r.points>0?"+":""}${r.points}</span>${r.void_at?"":`<button class="btn ghost" data-void="${r.id}">ยกเลิก</button>`}</div>`; }).join(""):"ยังไม่มีรายการ";
+  }catch(e){ $("#ptRecent").textContent=e.message; }
+  if(role==="owner"){ $("#ptOwner").hidden=false;
+    try{ const m=await (await api("/api/member/summary")).json();
+      $("#ptMembers").innerHTML=`<div class="kpi" style="margin-bottom:10px"><div class="sub">จำนวนสมาชิก</div><div class="v">${m.members} คน</div></div>`+(m.top.length?`<div class="tbl"><table><tr><th>รหัส</th><th>ชื่อ LINE</th><th>จาก LINE</th><th>หน้าร้าน</th><th>แลกไป</th><th>คงเหลือ</th></tr>${m.top.map(t=>`<tr><td>${esc(t.code)}</td><td>${esc(t.name||"")}</td><td>${t.line}</td><td>${t.shop}</td><td>${t.used}</td><td><b>${t.points}</b></td></tr>`).join("")}</table></div>`:"");
+    }catch(e){ $("#ptMembers").textContent=e.message; } }
+}
+function openPoints(){ loadPoints(); $("#ptCode").focus(); }
+$("#ptRecent").onclick=async e=>{ const b=e.target.closest("[data-void]"); if(!b) return;
+  if(b.dataset.sure!=="1"){ b.dataset.sure="1"; b.textContent="ยืนยันยกเลิก?"; b.classList.replace("ghost","danger"); setTimeout(()=>{ if(b.isConnected){ b.dataset.sure=""; b.textContent="ยกเลิก"; b.classList.replace("danger","ghost"); } },4000); return; }
+  try{ await api("/api/member/void",{method:"POST",body:JSON.stringify({id:Number(b.dataset.void)})}); loadPoints(); }catch(err){ $("#ptMsg").textContent="⚠️ "+err.message; } };
 
 /* ---------- summary (owner) ---------- */
 let sumData=null;
